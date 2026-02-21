@@ -1,0 +1,37 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
+
+export const useAuth = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", currentUser.id);
+          setIsAdmin(data?.some((r) => r.role === "admin") ?? false);
+        } else {
+          setIsAdmin(false);
+        }
+        setLoading(false);
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return { user, loading, isAdmin };
+};
