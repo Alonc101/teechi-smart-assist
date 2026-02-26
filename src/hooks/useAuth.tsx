@@ -8,27 +8,32 @@ export const useAuth = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    // Set up auth listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-
+        
         if (currentUser) {
-          const { data } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", currentUser.id);
-          setIsAdmin(data?.some((r) => r.role === "admin") ?? false);
+          // Use setTimeout to avoid Supabase auth deadlock
+          setTimeout(async () => {
+            try {
+              const { data } = await supabase
+                .from("user_roles")
+                .select("role")
+                .eq("user_id", currentUser.id);
+              setIsAdmin(data?.some((r) => r.role === "admin") ?? false);
+            } catch {
+              setIsAdmin(false);
+            }
+            setLoading(false);
+          }, 0);
         } else {
           setIsAdmin(false);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);

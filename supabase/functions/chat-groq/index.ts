@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",
         messages: [
           { role: "system", content: fullSystem },
           { role: "user", content: message },
@@ -80,7 +80,16 @@ Deno.serve(async (req) => {
       }),
     });
 
+    if (!groqResponse.ok) {
+      const errorText = await groqResponse.text();
+      console.error("Groq API error:", groqResponse.status, errorText);
+      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב מאוחר יותר." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const groqData = await groqResponse.json();
+    console.log("Groq response:", JSON.stringify(groqData).substring(0, 200));
     const answer = groqData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
 
     return new Response(JSON.stringify({ answer }), {
