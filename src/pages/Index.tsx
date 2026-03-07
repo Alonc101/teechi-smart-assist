@@ -155,7 +155,35 @@ const Index = () => {
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          const file = e.dataTransfer.files?.[0];
+          if (!file) return;
+          if (!file.type.startsWith("image/")) return;
+          if (file.size > MAX_IMAGE_SIZE) {
+            alert("הקובץ גדול מדי. גודל מקסימלי: 4MB");
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            setAttachedImage(reader.result as string);
+            setAttachedImageName(file.name);
+          };
+          reader.readAsDataURL(file);
+        }}
+      >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
             <BookOpen className="h-16 w-16 text-primary/30" />
