@@ -4,8 +4,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+
 import { Menu, Send, Loader2, BookOpen, ImagePlus, X, LoaderPinwheel } from "lucide-react";
 import TopicSidebar from "@/components/TopicSidebar";
 
@@ -139,7 +140,10 @@ const Index = () => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-80 p-0">
+          <SheetContent side="right" className="w-80 p-0" aria-describedby={undefined}>
+            <VisuallyHidden>
+              <SheetTitle>תפריט נושאים</SheetTitle>
+            </VisuallyHidden>
             <TopicSidebar
               selectedTopicId={selectedTopicId}
               onSelectTopic={handleSelectTopic}
@@ -150,9 +154,9 @@ const Index = () => {
         <LoaderPinwheel className="h-6 w-6 text-primary-foreground" />
         <h1 className="text-xl font-bold text-primary-foreground">Teechi</h1>
         {selectedTopicName && (
-          <Badge variant="secondary" className="mr-auto text-xs">
+          <span className="mr-auto inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
             {selectedSubjectName} / {selectedTopicName}
-          </Badge>
+          </span>
         )}
       </header>
 
