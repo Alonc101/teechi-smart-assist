@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Menu, Send, Loader2, BookOpen } from "lucide-react";
+import { Menu, Send, Loader2, BookOpen, ImagePlus, X } from "lucide-react";
 import TopicSidebar from "@/components/TopicSidebar";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  imageUrl?: string;
 }
+
+const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB
 
 const Index = () => {
   const { user, loading: authLoading, isAdmin } = useAuth();
@@ -25,7 +28,10 @@ const Index = () => {
   const [selectedSubjectName, setSelectedSubjectName] = useState("");
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [selectedTopicName, setSelectedTopicName] = useState("");
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [attachedImageName, setAttachedImageName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -36,7 +42,6 @@ const Index = () => {
   }, [messages]);
 
   const handleSelectTopic = (subjectId: number, subjectName: string, topicId: number, topicName: string) => {
-    // If switching topic, clear chat
     if (topicId !== selectedTopicId) {
       setMessages([]);
     }
@@ -47,28 +52,63 @@ const Index = () => {
     setSidebarOpen(false);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || sending) return;
-    const msg = input.trim();
-    setInput("");
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    // If no topic selected, show guidance
+    if (!file.type.startsWith("image/")) {
+      alert("ניתן להעלות רק קבצי תמונה");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert("הקובץ גדול מדי. גודל מקסימלי: 4MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedImage(reader.result as string);
+      setAttachedImageName(file.name);
+    };
+    reader.readAsDataURL(file);
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeImage = () => {
+    setAttachedImage(null);
+    setAttachedImageName("");
+  };
+
+  const sendMessage = async () => {
+    if ((!input.trim() && !attachedImage) || sending) return;
+    const msg = input.trim() || (attachedImage ? "מה יש בתמונה?" : "");
+    const currentImage = attachedImage;
+    setInput("");
+    setAttachedImage(null);
+    setAttachedImageName("");
+
     if (!selectedTopicId || !selectedSubjectId) {
       setMessages((prev) => [
         ...prev,
-        { role: "user", content: msg },
+        { role: "user", content: msg, imageUrl: currentImage || undefined },
         { role: "assistant", content: "בבקשה בחר מקצוע ונושא מהתפריט כדי שאוכל לעזור לך 📚" },
       ]);
       return;
     }
 
-    setMessages((prev) => [...prev, { role: "user", content: msg }]);
+    setMessages((prev) => [...prev, { role: "user", content: msg, imageUrl: currentImage || undefined }]);
     setSending(true);
 
     try {
-      const response = await supabase.functions.invoke("chat-groq", {
-        body: { message: msg, subjectId: selectedSubjectId, topicId: selectedTopicId },
-      });
+      const body: any = { message: msg, subjectId: selectedSubjectId, topicId: selectedTopicId };
+      if (currentImage) {
+        body.imageBase64 = currentImage;
+      }
+
+      const response = await supabase.functions.invoke("chat-groq", { body });
       if (response.error) throw response.error;
       const answer = response.data?.answer || "שגיאה בקבלת תשובה";
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
@@ -142,7 +182,15 @@ const Index = () => {
                   : "bg-muted text-foreground rounded-bl-sm"
               }`}
             >
-              <p className="whitespace-pre-wrap">{m.content}</p>
+              {m.imageUrl && (
+                <img
+                  src={m.imageUrl}
+                  alt="צרופה"
+                  className="rounded-lg mb-2 max-h-60 w-auto object-contain cursor-pointer"
+                  onClick={() => window.open(m.imageUrl, "_blank")}
+                />
+              )}
+              {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
             </div>
           </div>
         ))}
@@ -157,9 +205,49 @@ const Index = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Image Preview */}
+      {attachedImage && (
+        <div className="border-t bg-muted/50 px-3 py-2">
+          <div className="flex items-center gap-2 max-w-3xl mx-auto">
+            <div className="relative">
+              <img
+                src={attachedImage}
+                alt="תצוגה מקדימה"
+                className="h-16 w-16 rounded-lg object-cover border border-border"
+              />
+              <button
+                onClick={removeImage}
+                className="absolute -top-1.5 -left-1.5 rounded-full bg-destructive text-destructive-foreground p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+              {attachedImageName}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Input */}
       <div className="border-t bg-background p-3">
-        <div className="flex gap-2 max-w-3xl mx-auto">
+        <div className="flex gap-2 max-w-3xl mx-auto items-end">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageSelect}
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            title="הוסף תמונה"
+          >
+            <ImagePlus className="h-5 w-5" />
+          </Button>
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -173,7 +261,12 @@ const Index = () => {
             className="min-h-[44px] max-h-32 resize-none text-base"
             rows={1}
           />
-          <Button onClick={sendMessage} size="icon" disabled={sending || !input.trim()} className="shrink-0">
+          <Button
+            onClick={sendMessage}
+            size="icon"
+            disabled={sending || (!input.trim() && !attachedImage)}
+            className="shrink-0"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
