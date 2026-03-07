@@ -63,12 +63,15 @@ Deno.serve(async (req) => {
 
     const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
-    if (!lovableApiKey) {
+    if (!groqApiKey) {
       return new Response(JSON.stringify({ answer: "שירות AI לא מוגדר." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Choose model based on whether image is included
+    const model = imageBase64 ? "llama-3.2-11b-vision-preview" : "llama-3.1-8b-instant";
 
     // Build user content (text or text+image)
     let userContent: any = message;
@@ -79,14 +82,14 @@ Deno.serve(async (req) => {
       ];
     }
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
+        Authorization: `Bearer ${groqApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           { role: "system", content: fullSystem },
           { role: "user", content: userContent },
@@ -96,29 +99,16 @@ Deno.serve(async (req) => {
       }),
     });
 
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ answer: "יותר מדי בקשות, נסה שוב בעוד דקה." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ answer: "נגמרו הקרדיטים. פנה למנהל המערכת." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await aiResponse.text();
-      console.error("AI Gateway error:", status, errorText);
-      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב." }), {
+    if (!groqResponse.ok) {
+      const errorText = await groqResponse.text();
+      console.error("Groq API error:", groqResponse.status, errorText);
+      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב מאוחר יותר." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const aiData = await aiResponse.json();
-    const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
+    const groqData = await groqResponse.json();
+    const answer = groqData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
 
     return new Response(JSON.stringify({ answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
