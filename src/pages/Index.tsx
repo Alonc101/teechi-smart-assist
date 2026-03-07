@@ -140,7 +140,10 @@ const Index = () => {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-80 p-0">
+          <SheetContent side="right" className="w-80 p-0" aria-describedby={undefined}>
+            <VisuallyHidden>
+              <SheetTitle>תפריט נושאים</SheetTitle>
+            </VisuallyHidden>
             <TopicSidebar
               selectedTopicId={selectedTopicId}
               onSelectTopic={handleSelectTopic}
