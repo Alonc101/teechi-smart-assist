@@ -61,12 +61,44 @@ const Index = () => {
   const handleSelectTopic = (subjectId: number, subjectName: string, topicId: number, topicName: string) => {
     if (topicId !== selectedTopicId) {
       setMessages([]);
+      setSessionId(null);
     }
     setSelectedSubjectId(subjectId);
     setSelectedSubjectName(subjectName);
     setSelectedTopicId(topicId);
     setSelectedTopicName(topicName);
     setSidebarOpen(false);
+  };
+
+  const saveMessageToDb = async (currentSessionId: string, role: string, content: string) => {
+    await supabase.from("chat_messages").insert({
+      session_id: currentSessionId,
+      role,
+      content,
+    });
+  };
+
+  const getOrCreateSession = async (): Promise<string | null> => {
+    if (sessionId) return sessionId;
+    if (!studentId || !selectedSubjectId || !selectedTopicId) return null;
+
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({
+        student_id: studentId,
+        subject_id: selectedSubjectId,
+        topic_id: selectedTopicId,
+        title: `${selectedSubjectName} - ${selectedTopicName}`,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      console.error("Session creation error:", error);
+      return null;
+    }
+    setSessionId(data.id);
+    return data.id;
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
