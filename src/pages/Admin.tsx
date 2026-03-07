@@ -59,6 +59,7 @@ const sidebarItems: { key: AdminSection; label: string; icon: React.ElementType 
   { key: "topics", label: "נושאים", icon: Puzzle },
   { key: "prompts", label: "פרומפטים", icon: Brain },
   { key: "students", label: "תלמידים", icon: Users },
+  { key: "chatHistory", label: "היסטוריית צ׳אט", icon: MessageSquare },
 ];
 
 const Admin = () => {
