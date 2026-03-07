@@ -565,7 +565,14 @@ function PromptsSection({
     toast({ title: "נמחק" });
   };
 
+  const [allTopics, setAllTopics] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase.from("topics").select("id, name").then(({ data }) => data && setAllTopics(data));
+  }, []);
+
   const getSubjectName = (id: number) => subjects.find((s) => s.id === id)?.name || "—";
+  const getTopicName = (id: number) => allTopics.find((t) => t.id === id)?.name || "—";
   const getSchoolName = (id: string | null) => {
     if (!id) return "כללי";
     return schools.find((s) => s.id === id)?.name || "—";
@@ -632,7 +639,7 @@ function PromptsSection({
               <TableRow key={p.id}>
                 <TableCell>{getSchoolName(p.school_id)}</TableCell>
                 <TableCell>{getSubjectName(p.subject_id)}</TableCell>
-                <TableCell>{p.topic_id}</TableCell>
+                <TableCell>{getTopicName(p.topic_id)}</TableCell>
                 <TableCell>{p.grade || "הכל"}</TableCell>
                 <TableCell>{p.active ? <span className="text-primary font-bold">✅</span> : "❌"}</TableCell>
                 <TableCell>
