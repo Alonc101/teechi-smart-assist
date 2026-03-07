@@ -133,19 +133,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-    }
-
-    const aiData = await aiResponse.json();
-    const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
-
-    return new Response(JSON.stringify({ answer }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (error) {
-    console.error("Function error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-});
