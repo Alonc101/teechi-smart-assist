@@ -197,6 +197,9 @@ const Admin = () => {
           {activeSection === "students" && (
             <StudentsSection students={students} schools={schools} reload={loadStudents} toast={toast} />
           )}
+          {activeSection === "chatHistory" && (
+            <ChatHistorySection students={students} subjects={subjects} topics={topics} toast={toast} />
+          )}
         </div>
       </main>
     </div>
