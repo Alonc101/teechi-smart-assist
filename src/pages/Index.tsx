@@ -147,7 +147,8 @@ const Index = () => {
             />
           </SheetContent>
         </Sheet>
-        <h1 className="text-xl font-bold text-primary-foreground">Teechi 🎓</h1>
+        <LoaderPinwheel className="h-6 w-6 text-primary-foreground" />
+        <h1 className="text-xl font-bold text-primary-foreground">Teechi</h1>
         {selectedTopicName && (
           <Badge variant="secondary" className="mr-auto text-xs">
             {selectedSubjectName} / {selectedTopicName}
