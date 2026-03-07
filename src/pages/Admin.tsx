@@ -639,7 +639,7 @@ function PromptsSection({
               <TableRow key={p.id}>
                 <TableCell>{getSchoolName(p.school_id)}</TableCell>
                 <TableCell>{getSubjectName(p.subject_id)}</TableCell>
-                <TableCell>{p.topic_id}</TableCell>
+                <TableCell>{getTopicName(p.topic_id)}</TableCell>
                 <TableCell>{p.grade || "הכל"}</TableCell>
                 <TableCell>{p.active ? <span className="text-primary font-bold">✅</span> : "❌"}</TableCell>
                 <TableCell>
