@@ -48,14 +48,10 @@ import {
   Search,
   MessageSquare,
   Eye,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type AdminSection = "schools" | "subjects" | "topics" | "prompts" | "students";
+type AdminSection = "schools" | "subjects" | "topics" | "prompts" | "students" | "chatHistory";
 
 const sidebarItems: { key: AdminSection; label: string; icon: React.ElementType }[] = [
   { key: "schools", label: "בתי ספר", icon: School },
