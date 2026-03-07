@@ -23,7 +23,13 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    const groqApiKey = Deno.env.get("GROQ_API_KEY");
+
+    if (!lovableApiKey) {
+      return new Response(JSON.stringify({ answer: "שירות AI לא מוגדר." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -63,100 +69,58 @@ Deno.serve(async (req) => {
 
     const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
-    // If image is provided, use Lovable AI Gateway (multimodal)
+    // Build user content - text or multimodal
+    let userContent: any;
     if (imageBase64) {
-      if (!lovableApiKey) {
-        return new Response(JSON.stringify({ answer: "שירות ניתוח תמונות לא מוגדר." }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const userContent = [
+      userContent = [
         { type: "text", text: message },
         { type: "image_url", image_url: { url: imageBase64 } },
       ];
-
-      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${lovableApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: fullSystem },
-            { role: "user", content: userContent },
-          ],
-          temperature: 0.3,
-          max_tokens: 1000,
-        }),
-      });
-
-      if (!aiResponse.ok) {
-        const status = aiResponse.status;
-        if (status === 429) {
-          return new Response(JSON.stringify({ answer: "יותר מדי בקשות, נסה שוב בעוד דקה." }), {
-            status: 429,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        if (status === 402) {
-          return new Response(JSON.stringify({ answer: "נגמרו הקרדיטים. פנה למנהל המערכת." }), {
-            status: 402,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        const errorText = await aiResponse.text();
-        console.error("AI Gateway error:", status, errorText);
-        return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב." }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const aiData = await aiResponse.json();
-      const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
-      return new Response(JSON.stringify({ answer }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    } else {
+      userContent = message;
     }
 
-    // Text-only: use Groq
-    if (!groqApiKey) {
-      return new Response(JSON.stringify({ answer: "שירות AI לא מוגדר." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    // Use OpenAI gpt-5-mini via Lovable AI Gateway for both text and images
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${groqApiKey}`,
+        Authorization: `Bearer ${lovableApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-oss-120b",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: fullSystem },
-          { role: "user", content: message },
+          { role: "user", content: userContent },
         ],
         temperature: 0.3,
-        max_tokens: 700,
+        max_tokens: 1000,
       }),
     });
 
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      console.error("Groq API error:", groqResponse.status, errorText);
-      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב מאוחר יותר." }), {
+    if (!aiResponse.ok) {
+      const status = aiResponse.status;
+      if (status === 429) {
+        return new Response(JSON.stringify({ answer: "יותר מדי בקשות, נסה שוב בעוד דקה." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (status === 402) {
+        return new Response(JSON.stringify({ answer: "נגמרו הקרדיטים. פנה למנהל המערכת." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const errorText = await aiResponse.text();
+      console.error("AI Gateway error:", status, errorText);
+      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const groqData = await groqResponse.json();
-    const answer = groqData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
+    const aiData = await aiResponse.json();
+    const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
 
     return new Response(JSON.stringify({ answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
