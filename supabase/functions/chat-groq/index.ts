@@ -73,6 +73,10 @@ Deno.serve(async (req) => {
 
     const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
+    console.log("Prompt found:", !!prompt, "Subject:", subjectId, "Topic:", topicId);
+    console.log("System prompt length:", fullSystem.length);
+    console.log("System prompt preview:", fullSystem.substring(0, 200));
+
     // Build user content for Chat Completions API
     let userContent: any;
     if (imageBase64) {
