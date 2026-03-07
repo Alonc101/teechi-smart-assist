@@ -152,15 +152,28 @@ const Index = () => {
     setSending(true);
 
     try {
+      // Create or get session, then save user message
+      const currentSessionId = await getOrCreateSession();
+
       const body: any = { message: msg, subjectId: selectedSubjectId, topicId: selectedTopicId };
       if (currentImage) {
         body.imageBase64 = currentImage;
+      }
+
+      if (currentSessionId) {
+        await saveMessageToDb(currentSessionId, "user", msg);
       }
 
       const response = await supabase.functions.invoke("chat-groq", { body });
       if (response.error) throw response.error;
       const answer = response.data?.answer || "שגיאה בקבלת תשובה";
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+
+      if (currentSessionId) {
+        await saveMessageToDb(currentSessionId, "assistant", answer);
+        // Update session timestamp
+        await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", currentSessionId);
+      }
     } catch (err) {
       console.error("Send error:", err);
       setMessages((prev) => [...prev, { role: "assistant", content: "שגיאה בשליחת ההודעה. נסה שוב." }]);
