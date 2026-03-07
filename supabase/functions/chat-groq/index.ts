@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch prompt
-    let systemPrompt = "אתה מורה חכם ומסביר. הסבר בשלבים, תן דוגמאות, ובדוק הבנה. אל תיתן תשובה ישירה בלי הסבר.";
+    let systemPrompt = "אתה מורה פרטי למתמטיקה לתלמידים בישראל. כשתלמיד שולח תרגיל מתמטיקה: הסבר בבהירות בעברית, פתור שלב אחרי שלב, אל תדלג על שלבים, עודד הבנה במקום רק לתת תשובה.";
     let assistantInstructions = "";
 
     const { data: prompt } = await supabase
@@ -69,32 +69,36 @@ Deno.serve(async (req) => {
 
     const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
-    // Build user content - text or multimodal (gpt-4o supports both)
-    let userContent: any;
+    // Build input content for OpenAI Responses API
+    let userContent: any[];
     if (imageBase64) {
       userContent = [
-        { type: "text", text: message },
-        { type: "image_url", image_url: { url: imageBase64 } },
+        { type: "input_text", text: fullSystem + "\n\n" + message },
+        { type: "input_image", image_url: imageBase64 },
       ];
     } else {
-      userContent = message;
+      userContent = [
+        { type: "input_text", text: fullSystem + "\n\n" + message },
+      ];
     }
 
-    // Call OpenAI API directly with gpt-4o
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Call OpenAI Responses API with gpt-4o-mini
+    const aiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${openaiApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: fullSystem },
-          { role: "user", content: userContent },
+        model: "gpt-4o-mini",
+        input: [
+          {
+            role: "user",
+            content: userContent,
+          },
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_output_tokens: 600,
       }),
     });
 
@@ -114,13 +118,34 @@ Deno.serve(async (req) => {
       }
       const errorText = await aiResponse.text();
       console.error("OpenAI API error:", status, errorText);
+
+      // If image couldn't be read
+      if (imageBase64 && (status === 400 || errorText.includes("image"))) {
+        return new Response(JSON.stringify({ answer: "לא הצלחתי לזהות את התרגיל בתמונה. אפשר לנסות לצלם שוב או לכתוב את התרגיל בצ'אט." }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiData = await aiResponse.json();
-    const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
+    // Responses API returns output array with message items
+    let answer = "שגיאה בקבלת תשובה";
+    if (aiData.output) {
+      for (const item of aiData.output) {
+        if (item.type === "message" && item.content) {
+          for (const block of item.content) {
+            if (block.type === "output_text") {
+              answer = block.text;
+              break;
+            }
+          }
+        }
+      }
+    }
 
     return new Response(JSON.stringify({ answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
