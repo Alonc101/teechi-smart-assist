@@ -32,8 +32,23 @@ const Index = () => {
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [attachedImageName, setAttachedImageName] = useState("");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load student ID on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("students")
+      .select("id")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setStudentId(data.id);
+      });
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
