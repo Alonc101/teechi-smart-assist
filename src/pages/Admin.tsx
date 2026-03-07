@@ -817,6 +817,14 @@ function ChatHistorySection({
     setLoadingMessages(false);
   };
 
+  const deleteSession = async (sessionId: string) => {
+    // Delete messages first (foreign key), then session
+    await supabase.from("chat_messages").delete().eq("session_id", sessionId);
+    await supabase.from("chat_sessions").delete().eq("id", sessionId);
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    toast({ title: "שיחה נמחקה" });
+  };
+
   let filtered = sessions;
   if (filterStudent && filterStudent !== "all") {
     filtered = filtered.filter((s) => s.student_id === filterStudent);
