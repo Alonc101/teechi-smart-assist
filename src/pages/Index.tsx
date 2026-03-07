@@ -32,8 +32,23 @@ const Index = () => {
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [attachedImageName, setAttachedImageName] = useState("");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load student ID on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("students")
+      .select("id")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) setStudentId(data.id);
+      });
+  }, [user]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/auth");
@@ -46,12 +61,44 @@ const Index = () => {
   const handleSelectTopic = (subjectId: number, subjectName: string, topicId: number, topicName: string) => {
     if (topicId !== selectedTopicId) {
       setMessages([]);
+      setSessionId(null);
     }
     setSelectedSubjectId(subjectId);
     setSelectedSubjectName(subjectName);
     setSelectedTopicId(topicId);
     setSelectedTopicName(topicName);
     setSidebarOpen(false);
+  };
+
+  const saveMessageToDb = async (currentSessionId: string, role: string, content: string) => {
+    await supabase.from("chat_messages").insert({
+      session_id: currentSessionId,
+      role,
+      content,
+    });
+  };
+
+  const getOrCreateSession = async (): Promise<string | null> => {
+    if (sessionId) return sessionId;
+    if (!studentId || !selectedSubjectId || !selectedTopicId) return null;
+
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .insert({
+        student_id: studentId,
+        subject_id: selectedSubjectId,
+        topic_id: selectedTopicId,
+        title: `${selectedSubjectName} - ${selectedTopicName}`,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      console.error("Session creation error:", error);
+      return null;
+    }
+    setSessionId(data.id);
+    return data.id;
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,15 +152,28 @@ const Index = () => {
     setSending(true);
 
     try {
+      // Create or get session, then save user message
+      const currentSessionId = await getOrCreateSession();
+
       const body: any = { message: msg, subjectId: selectedSubjectId, topicId: selectedTopicId };
       if (currentImage) {
         body.imageBase64 = currentImage;
+      }
+
+      if (currentSessionId) {
+        await saveMessageToDb(currentSessionId, "user", msg);
       }
 
       const response = await supabase.functions.invoke("chat-groq", { body });
       if (response.error) throw response.error;
       const answer = response.data?.answer || "שגיאה בקבלת תשובה";
       setMessages((prev) => [...prev, { role: "assistant", content: answer }]);
+
+      if (currentSessionId) {
+        await saveMessageToDb(currentSessionId, "assistant", answer);
+        // Update session timestamp
+        await supabase.from("chat_sessions").update({ updated_at: new Date().toISOString() }).eq("id", currentSessionId);
+      }
     } catch (err) {
       console.error("Send error:", err);
       setMessages((prev) => [...prev, { role: "assistant", content: "שגיאה בשליחת ההודעה. נסה שוב." }]);
