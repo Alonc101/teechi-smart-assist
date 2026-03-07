@@ -157,7 +157,7 @@ const Index = () => {
 
       {/* Messages */}
       <div
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className={`flex-1 overflow-y-auto p-4 space-y-4 relative transition-colors ${dragOver ? "bg-primary/5" : ""}`}
         onDragOver={(e) => {
           e.preventDefault();
           e.stopPropagation();
