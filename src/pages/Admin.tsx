@@ -46,10 +46,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  MessageSquare,
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type AdminSection = "schools" | "subjects" | "topics" | "prompts" | "students";
+type AdminSection = "schools" | "subjects" | "topics" | "prompts" | "students" | "chatHistory";
 
 const sidebarItems: { key: AdminSection; label: string; icon: React.ElementType }[] = [
   { key: "schools", label: "בתי ספר", icon: School },
@@ -57,6 +59,7 @@ const sidebarItems: { key: AdminSection; label: string; icon: React.ElementType 
   { key: "topics", label: "נושאים", icon: Puzzle },
   { key: "prompts", label: "פרומפטים", icon: Brain },
   { key: "students", label: "תלמידים", icon: Users },
+  { key: "chatHistory", label: "היסטוריית צ׳אט", icon: MessageSquare },
 ];
 
 const Admin = () => {
@@ -193,6 +196,9 @@ const Admin = () => {
           )}
           {activeSection === "students" && (
             <StudentsSection students={students} schools={schools} reload={loadStudents} toast={toast} />
+          )}
+          {activeSection === "chatHistory" && (
+            <ChatHistorySection students={students} subjects={subjects} topics={topics} toast={toast} />
           )}
         </div>
       </main>
@@ -767,7 +773,173 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
   );
 }
 
-/* ========== Shared Components ========== */
+/* ========== Chat History ========== */
+function ChatHistorySection({
+  students, subjects, topics, toast,
+}: { students: any[]; subjects: any[]; topics: any[]; toast: any }) {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [filterStudent, setFilterStudent] = useState("");
+  const [filterSubject, setFilterSubject] = useState("");
+  const [filterTopic, setFilterTopic] = useState("");
+  const [selectedSession, setSelectedSession] = useState<any | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
+  const loadSessions = async () => {
+    const { data } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .order("updated_at", { ascending: false });
+    if (data) setSessions(data);
+  };
+
+  useEffect(() => { loadSessions(); }, []);
+
+  const getStudentName = (id: string) => students.find((s) => s.id === id)?.student_name || "—";
+  const getSubjectName = (id: number | null) => {
+    if (!id) return "—";
+    return subjects.find((s) => s.id === id)?.name || "—";
+  };
+  const getTopicName = (id: number | null) => {
+    if (!id) return "—";
+    return topics.find((t) => t.id === id)?.name || "—";
+  };
+
+  const viewMessages = async (session: any) => {
+    setSelectedSession(session);
+    setLoadingMessages(true);
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("session_id", session.id)
+      .order("created_at", { ascending: true });
+    if (data) setMessages(data);
+    setLoadingMessages(false);
+  };
+
+  let filtered = sessions;
+  if (filterStudent && filterStudent !== "all") {
+    filtered = filtered.filter((s) => s.student_id === filterStudent);
+  }
+  if (filterSubject && filterSubject !== "all") {
+    filtered = filtered.filter((s) => String(s.subject_id) === filterSubject);
+  }
+  if (filterTopic && filterTopic !== "all") {
+    filtered = filtered.filter((s) => String(s.topic_id) === filterTopic);
+  }
+
+  // Unique students from sessions
+  const sessionStudentIds = [...new Set(sessions.map((s) => s.student_id))];
+  const sessionStudents = students.filter((st) => sessionStudentIds.includes(st.id));
+
+  return (
+    <>
+      <SectionHeader title="היסטוריית צ׳אט" icon={MessageSquare} count={sessions.length} />
+
+      <div className="flex flex-wrap gap-3 mb-4">
+        <Select value={filterStudent} onValueChange={setFilterStudent}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="סנן תלמיד" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">הכל</SelectItem>
+            {sessionStudents.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.student_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterSubject} onValueChange={setFilterSubject}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="סנן מקצוע" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">הכל</SelectItem>
+            {subjects.map((s) => (
+              <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterTopic} onValueChange={setFilterTopic}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="סנן נושא" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">הכל</SelectItem>
+            {topics.map((t) => (
+              <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>תלמיד</TableHead>
+              <TableHead>כותרת</TableHead>
+              <TableHead>מקצוע</TableHead>
+              <TableHead>נושא</TableHead>
+              <TableHead>תאריך</TableHead>
+              <TableHead className="w-20">צפייה</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((s) => (
+              <TableRow key={s.id}>
+                <TableCell className="font-medium">{getStudentName(s.student_id)}</TableCell>
+                <TableCell>{s.title}</TableCell>
+                <TableCell>{getSubjectName(s.subject_id)}</TableCell>
+                <TableCell>{getTopicName(s.topic_id)}</TableCell>
+                <TableCell>{new Date(s.updated_at).toLocaleDateString("he-IL")}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={() => viewMessages(s)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {filtered.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">אין שיחות</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Messages Dialog */}
+      <Dialog open={!!selectedSession} onOpenChange={(o) => !o && setSelectedSession(null)}>
+        <DialogContent dir="rtl" className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              שיחה: {selectedSession?.title} — {getStudentName(selectedSession?.student_id || "")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-3 py-2">
+            {loadingMessages ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+            ) : messages.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">אין הודעות</p>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`rounded-lg p-3 text-sm ${
+                    m.role === "user"
+                      ? "bg-primary/10 mr-8"
+                      : "bg-muted ml-8"
+                  }`}
+                >
+                  <p className="text-xs font-semibold text-muted-foreground mb-1">
+                    {m.role === "user" ? "תלמיד" : "מורה AI"} • {new Date(m.created_at).toLocaleTimeString("he-IL")}
+                  </p>
+                  <p className="whitespace-pre-wrap">{m.content}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+
 function SectionHeader({ title, icon: Icon, count }: { title: string; icon: React.ElementType; count: number }) {
   return (
     <div className="flex items-center gap-3 mb-6">
