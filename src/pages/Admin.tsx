@@ -46,6 +46,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  MessageSquare,
+  Eye,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
