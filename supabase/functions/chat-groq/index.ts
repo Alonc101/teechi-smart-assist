@@ -22,10 +22,10 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
 
-    if (!lovableApiKey) {
-      return new Response(JSON.stringify({ answer: "שירות AI לא מוגדר." }), {
+    if (!openaiApiKey) {
+      return new Response(JSON.stringify({ answer: "שירות AI לא מוגדר. חסר מפתח OpenAI." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
     const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
-    // Build user content - text or multimodal
+    // Build user content - text or multimodal (gpt-4o supports both)
     let userContent: any;
     if (imageBase64) {
       userContent = [
@@ -80,15 +80,15 @@ Deno.serve(async (req) => {
       userContent = message;
     }
 
-    // Use OpenAI gpt-5-mini via Lovable AI Gateway for both text and images
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call OpenAI API directly with gpt-4o
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${lovableApiKey}`,
+        Authorization: `Bearer ${openaiApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: fullSystem },
           { role: "user", content: userContent },
@@ -106,17 +106,33 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ answer: "נגמרו הקרדיטים. פנה למנהל המערכת." }), {
-          status: 402,
+      if (status === 402 || status === 401) {
+        return new Response(JSON.stringify({ answer: "בעיה עם מפתח OpenAI. פנה למנהל המערכת." }), {
+          status: status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errorText = await aiResponse.text();
-      console.error("AI Gateway error:", status, errorText);
+      console.error("OpenAI API error:", status, errorText);
       return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const aiData = await aiResponse.json();
+    const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
+
+    return new Response(JSON.stringify({ answer }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    console.error("Function error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
     }
 
     const aiData = await aiResponse.json();
