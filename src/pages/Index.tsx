@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
-import { Menu, Send, Loader2, BookOpen, ImagePlus, X } from "lucide-react";
+import { Menu, Send, Loader2, BookOpen, ImagePlus, X, LoaderPinwheel } from "lucide-react";
 import TopicSidebar from "@/components/TopicSidebar";
 
 interface Message {
@@ -147,7 +147,8 @@ const Index = () => {
             />
           </SheetContent>
         </Sheet>
-        <h1 className="text-xl font-bold text-primary-foreground">Teechi 🎓</h1>
+        <LoaderPinwheel className="h-6 w-6 text-primary-foreground" />
+        <h1 className="text-xl font-bold text-primary-foreground">Teechi</h1>
         {selectedTopicName && (
           <Badge variant="secondary" className="mr-auto text-xs">
             {selectedSubjectName} / {selectedTopicName}
