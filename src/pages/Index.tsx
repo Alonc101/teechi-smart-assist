@@ -154,9 +154,9 @@ const Index = () => {
         <LoaderPinwheel className="h-6 w-6 text-primary-foreground" />
         <h1 className="text-xl font-bold text-primary-foreground">Teechi</h1>
         {selectedTopicName && (
-          <Badge variant="secondary" className="mr-auto text-xs">
+          <span className="mr-auto inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
             {selectedSubjectName} / {selectedTopicName}
-          </Badge>
+          </span>
         )}
       </header>
 
