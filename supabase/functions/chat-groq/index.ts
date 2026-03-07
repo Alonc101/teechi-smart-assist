@@ -25,11 +25,15 @@ Deno.serve(async (req) => {
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!openaiApiKey) {
+      console.error("OPENAI_API_KEY is not set");
       return new Response(JSON.stringify({ answer: "שירות AI לא מוגדר. חסר מפתח OpenAI." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Log key prefix for debugging (safe - only first 8 chars)
+    console.log("Using OpenAI key starting with:", openaiApiKey.substring(0, 8) + "...");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -69,21 +73,19 @@ Deno.serve(async (req) => {
 
     const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
-    // Build input content for OpenAI Responses API
-    let userContent: any[];
+    // Build user content for Chat Completions API
+    let userContent: any;
     if (imageBase64) {
       userContent = [
-        { type: "input_text", text: fullSystem + "\n\n" + message },
-        { type: "input_image", image_url: imageBase64 },
+        { type: "text", text: message },
+        { type: "image_url", image_url: { url: imageBase64 } },
       ];
     } else {
-      userContent = [
-        { type: "input_text", text: fullSystem + "\n\n" + message },
-      ];
+      userContent = message;
     }
 
-    // Call OpenAI Responses API with gpt-4o-mini
-    const aiResponse = await fetch("https://api.openai.com/v1/responses", {
+    // Call OpenAI Chat Completions API with gpt-4o-mini
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${openaiApiKey}`,
@@ -91,61 +93,47 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        input: [
-          {
-            role: "user",
-            content: userContent,
-          },
+        messages: [
+          { role: "system", content: fullSystem },
+          { role: "user", content: userContent },
         ],
         temperature: 0.3,
-        max_output_tokens: 600,
+        max_tokens: 600,
       }),
     });
 
     if (!aiResponse.ok) {
       const status = aiResponse.status;
+      const errorText = await aiResponse.text();
+      console.error("OpenAI API error:", status, errorText);
+
       if (status === 429) {
         return new Response(JSON.stringify({ answer: "יותר מדי בקשות, נסה שוב בעוד דקה." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (status === 402 || status === 401) {
-        return new Response(JSON.stringify({ answer: "בעיה עם מפתח OpenAI. פנה למנהל המערכת." }), {
-          status: status,
+      if (status === 401) {
+        return new Response(JSON.stringify({ answer: "בעיה עם מפתח OpenAI. פנה למנהל המערכת.", debug: errorText }), {
+          status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await aiResponse.text();
-      console.error("OpenAI API error:", status, errorText);
 
       // If image couldn't be read
-      if (imageBase64 && (status === 400 || errorText.includes("image"))) {
+      if (imageBase64 && status === 400) {
         return new Response(JSON.stringify({ answer: "לא הצלחתי לזהות את התרגיל בתמונה. אפשר לנסות לצלם שוב או לכתוב את התרגיל בצ'אט." }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב." }), {
+      return new Response(JSON.stringify({ answer: "שגיאה בשירות AI. נסה שוב.", debug: errorText }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiData = await aiResponse.json();
-    // Responses API returns output array with message items
-    let answer = "שגיאה בקבלת תשובה";
-    if (aiData.output) {
-      for (const item of aiData.output) {
-        if (item.type === "message" && item.content) {
-          for (const block of item.content) {
-            if (block.type === "output_text") {
-              answer = block.text;
-              break;
-            }
-          }
-        }
-      }
-    }
+    const answer = aiData.choices?.[0]?.message?.content || "שגיאה בקבלת תשובה";
 
     return new Response(JSON.stringify({ answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
