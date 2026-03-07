@@ -185,6 +185,14 @@ const Index = () => {
           reader.readAsDataURL(file);
         }}
       >
+        {dragOver && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg pointer-events-none">
+            <div className="flex flex-col items-center gap-2 text-primary">
+              <ImagePlus className="h-10 w-10" />
+              <span className="text-sm font-medium">שחרר כדי לצרף תמונה</span>
+            </div>
+          </div>
+        )}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
             <BookOpen className="h-16 w-16 text-primary/30" />
