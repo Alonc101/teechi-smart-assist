@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
       .eq("topic_id", topicId)
       .eq("active", true)
       .eq("language", "he")
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
