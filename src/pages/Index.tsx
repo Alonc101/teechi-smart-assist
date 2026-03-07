@@ -29,6 +29,7 @@ const Index = () => {
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [selectedTopicName, setSelectedTopicName] = useState("");
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [attachedImageName, setAttachedImageName] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
