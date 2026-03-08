@@ -35,6 +35,8 @@ const Index = () => {
   const [attachedImageName, setAttachedImageName] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentProfile, setStudentProfile] = useState<{ grade: string | null; school_id: string | null } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
