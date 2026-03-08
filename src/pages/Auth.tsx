@@ -100,7 +100,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>בית ספר</Label>
+                  <Label>בית ספר <span className="text-destructive">*</span></Label>
                   <Select value={schoolId} onValueChange={setSchoolId}>
                     <SelectTrigger><SelectValue placeholder="בחר בית ספר" /></SelectTrigger>
                     <SelectContent>
@@ -111,7 +111,7 @@ const Auth = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>כיתה</Label>
+                  <Label>כיתה <span className="text-destructive">*</span></Label>
                   <Select value={grade} onValueChange={setGrade}>
                     <SelectTrigger><SelectValue placeholder="בחר כיתה" /></SelectTrigger>
                     <SelectContent>
