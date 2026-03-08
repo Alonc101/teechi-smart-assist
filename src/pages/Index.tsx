@@ -10,7 +10,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Menu, Send, Loader2, BookOpen, ImagePlus, X, LoaderPinwheel } from "lucide-react";
 import TopicSidebar from "@/components/TopicSidebar";
 import StudentSettings from "@/components/StudentSettings";
-import MathMessage from "@/components/MathMessage";
+import MathSolutionSteps from "@/components/MathSolutionSteps";
 
 interface Message {
   role: "user" | "assistant";
@@ -306,7 +306,7 @@ const Index = () => {
               )}
               {m.content && (
                 m.role === "assistant"
-                  ? <MathMessage text={m.content} />
+                  ? <MathSolutionSteps text={m.content} />
                   : <p className="whitespace-pre-wrap">{m.content}</p>
               )}
             </div>
