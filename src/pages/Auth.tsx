@@ -79,7 +79,10 @@ const Auth = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4" dir="rtl">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-primary">Teechi 🎓</CardTitle>
+          <CardTitle className="flex items-center justify-center gap-2 text-3xl font-bold text-primary">
+            <LoaderPinwheel className="h-8 w-8" />
+            <span>Teechi</span>
+          </CardTitle>
           <p className="text-muted-foreground">{isLogin ? "התחברות" : "הרשמה"}</p>
         </CardHeader>
         <CardContent>
