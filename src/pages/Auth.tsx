@@ -100,7 +100,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>בית ספר</Label>
+                  <Label>בית ספר <span className="text-destructive">*</span></Label>
                   <Select value={schoolId} onValueChange={setSchoolId}>
                     <SelectTrigger><SelectValue placeholder="בחר בית ספר" /></SelectTrigger>
                     <SelectContent>
