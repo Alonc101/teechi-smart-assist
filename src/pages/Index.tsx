@@ -304,7 +304,11 @@ const Index = () => {
                   onClick={() => window.open(m.imageUrl, "_blank")}
                 />
               )}
-              {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
+              {m.content && (
+                m.role === "assistant"
+                  ? <MathMessage text={m.content} />
+                  : <p className="whitespace-pre-wrap">{m.content}</p>
+              )}
             </div>
           </div>
         ))}
