@@ -40,17 +40,23 @@ const Index = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load student ID on mount
-  useEffect(() => {
+  const loadStudentProfile = () => {
     if (!user) return;
     supabase
       .from("students")
-      .select("id")
+      .select("id, grade, school_id")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) setStudentId(data.id);
+        if (data) {
+          setStudentId(data.id);
+          setStudentProfile({ grade: data.grade, school_id: data.school_id });
+        }
       });
+  };
+
+  useEffect(() => {
+    loadStudentProfile();
   }, [user]);
 
   useEffect(() => {
