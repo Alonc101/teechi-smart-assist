@@ -183,7 +183,7 @@ const Admin = () => {
             <SubjectsSection subjects={subjects} reload={loadSubjects} toast={toast} />
           )}
           {activeSection === "topics" && (
-            <TopicsSection topics={topics} subjects={subjects} reload={loadAllTopics} toast={toast} />
+            <TopicsSection topics={topics} subjects={subjects} schools={schools} reload={loadAllTopics} toast={toast} />
           )}
           {activeSection === "prompts" && (
             <PromptsSection
