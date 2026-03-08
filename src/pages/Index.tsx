@@ -217,6 +217,8 @@ const Index = () => {
               selectedTopicId={selectedTopicId}
               onSelectTopic={handleSelectTopic}
               isAdmin={isAdmin}
+              studentProfile={studentProfile}
+              onOpenSettings={() => { setSidebarOpen(false); setSettingsOpen(true); }}
             />
           </SheetContent>
         </Sheet>
