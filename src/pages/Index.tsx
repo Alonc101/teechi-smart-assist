@@ -306,7 +306,7 @@ const Index = () => {
               )}
               {m.content && (
                 m.role === "assistant"
-                  ? <MathMessage text={m.content} />
+                  ? <MathSolutionSteps text={m.content} />
                   : <p className="whitespace-pre-wrap">{m.content}</p>
               )}
             </div>
