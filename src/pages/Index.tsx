@@ -342,6 +342,16 @@ const Index = () => {
         </div>
       )}
 
+      {/* Settings Dialog */}
+      {user && (
+        <StudentSettings
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          userId={user.id}
+          onSaved={loadStudentProfile}
+        />
+      )}
+
       {/* Input */}
       <div className="border-t bg-background p-3">
         <div className="flex gap-2 max-w-3xl mx-auto items-end">
