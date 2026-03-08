@@ -10,7 +10,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Menu, Send, Loader2, BookOpen, ImagePlus, X, LoaderPinwheel } from "lucide-react";
 import TopicSidebar from "@/components/TopicSidebar";
 import StudentSettings from "@/components/StudentSettings";
-import MathMessage from "@/components/MathMessage";
+import MathSolutionSteps from "@/components/MathSolutionSteps";
 
 interface Message {
   role: "user" | "assistant";
