@@ -229,21 +229,34 @@ export type Database = {
       }
       topics: {
         Row: {
+          grade: string | null
           id: number
           name: string
+          school_id: string | null
           subject_id: number
         }
         Insert: {
+          grade?: string | null
           id?: number
           name: string
+          school_id?: string | null
           subject_id: number
         }
         Update: {
+          grade?: string | null
           id?: number
           name?: string
+          school_id?: string | null
           subject_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "topics_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "topics_subject_id_fkey"
             columns: ["subject_id"]

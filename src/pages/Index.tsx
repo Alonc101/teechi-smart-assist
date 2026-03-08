@@ -9,6 +9,7 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 import { Menu, Send, Loader2, BookOpen, ImagePlus, X, LoaderPinwheel } from "lucide-react";
 import TopicSidebar from "@/components/TopicSidebar";
+import StudentSettings from "@/components/StudentSettings";
 
 interface Message {
   role: "user" | "assistant";
@@ -34,20 +35,28 @@ const Index = () => {
   const [attachedImageName, setAttachedImageName] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentProfile, setStudentProfile] = useState<{ grade: string | null; school_id: string | null } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load student ID on mount
-  useEffect(() => {
+  const loadStudentProfile = () => {
     if (!user) return;
     supabase
       .from("students")
-      .select("id")
+      .select("id, grade, school_id")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data) setStudentId(data.id);
+        if (data) {
+          setStudentId(data.id);
+          setStudentProfile({ grade: data.grade, school_id: data.school_id });
+        }
       });
+  };
+
+  useEffect(() => {
+    loadStudentProfile();
   }, [user]);
 
   useEffect(() => {
@@ -208,6 +217,8 @@ const Index = () => {
               selectedTopicId={selectedTopicId}
               onSelectTopic={handleSelectTopic}
               isAdmin={isAdmin}
+              studentProfile={studentProfile}
+              onOpenSettings={() => { setSidebarOpen(false); setSettingsOpen(true); }}
             />
           </SheetContent>
         </Sheet>
@@ -329,6 +340,16 @@ const Index = () => {
             </span>
           </div>
         </div>
+      )}
+
+      {/* Settings Dialog */}
+      {user && (
+        <StudentSettings
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          userId={user.id}
+          onSaved={loadStudentProfile}
+        />
       )}
 
       {/* Input */}

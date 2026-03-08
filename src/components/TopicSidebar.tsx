@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, ChevronDown, ChevronLeft, BookOpen, LogOut, Shield } from "lucide-react";
+import { Search, ChevronDown, ChevronLeft, BookOpen, LogOut, Shield, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Subject {
@@ -15,16 +15,25 @@ interface Topic {
   id: number;
   name: string;
   subject_id: number;
+  grade: string | null;
+  school_id: string | null;
+}
+
+interface StudentProfile {
+  grade: string | null;
+  school_id: string | null;
 }
 
 interface TopicSidebarProps {
   selectedTopicId: number | null;
   onSelectTopic: (subjectId: number, subjectName: string, topicId: number, topicName: string) => void;
   isAdmin: boolean;
+  studentProfile?: StudentProfile | null;
+  onOpenSettings?: () => void;
 }
 
 const TopicSidebar = forwardRef<HTMLDivElement, TopicSidebarProps>(
-  ({ selectedTopicId, onSelectTopic, isAdmin }, ref) => {
+  ({ selectedTopicId, onSelectTopic, isAdmin, studentProfile, onOpenSettings }, ref) => {
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [topics, setTopics] = useState<Topic[]>([]);
     const [search, setSearch] = useState("");
@@ -35,7 +44,7 @@ const TopicSidebar = forwardRef<HTMLDivElement, TopicSidebarProps>(
       supabase.from("subjects").select("id, name").then(({ data }) => {
         if (data) setSubjects(data);
       });
-      supabase.from("topics").select("id, name, subject_id").then(({ data }) => {
+      supabase.from("topics").select("id, name, subject_id, grade, school_id").then(({ data }) => {
         if (data) setTopics(data);
       });
     }, []);
@@ -48,9 +57,18 @@ const TopicSidebar = forwardRef<HTMLDivElement, TopicSidebarProps>(
       });
     };
 
+    // Filter topics by student's school and grade (admins see all)
+    const relevantTopics = isAdmin
+      ? topics
+      : topics.filter((t) => {
+          const schoolMatch = !t.school_id || t.school_id === studentProfile?.school_id;
+          const gradeMatch = !t.grade || t.grade === studentProfile?.grade;
+          return schoolMatch && gradeMatch;
+        });
+
     const filteredTopics = search.trim()
-      ? topics.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
-      : topics;
+      ? relevantTopics.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
+      : relevantTopics;
 
     const subjectsWithTopics = subjects
       .map((s) => ({
@@ -124,6 +142,11 @@ const TopicSidebar = forwardRef<HTMLDivElement, TopicSidebarProps>(
 
         {/* Footer */}
         <div className="border-t p-3 space-y-2">
+          {onOpenSettings && (
+            <Button onClick={onOpenSettings} variant="ghost" className="w-full justify-start gap-2 text-sm">
+              <Settings className="h-4 w-4" /> הגדרות
+            </Button>
+          )}
           {isAdmin && (
             <Button onClick={() => navigate("/admin")} variant="ghost" className="w-full justify-start gap-2 text-sm">
               <Shield className="h-4 w-4" /> ניהול (Admin)

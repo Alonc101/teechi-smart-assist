@@ -183,7 +183,7 @@ const Admin = () => {
             <SubjectsSection subjects={subjects} reload={loadSubjects} toast={toast} />
           )}
           {activeSection === "topics" && (
-            <TopicsSection topics={topics} subjects={subjects} reload={loadAllTopics} toast={toast} />
+            <TopicsSection topics={topics} subjects={subjects} schools={schools} reload={loadAllTopics} toast={toast} />
           )}
           {activeSection === "prompts" && (
             <PromptsSection
@@ -378,29 +378,50 @@ function SubjectsSection({ subjects, reload, toast }: { subjects: any[]; reload:
 }
 
 /* ========== Topics ========== */
-function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; subjects: any[]; reload: () => void; toast: any }) {
+function TopicsSection({ topics, subjects, schools, reload, toast }: { topics: any[]; subjects: any[]; schools: any[]; reload: () => void; toast: any }) {
+  const GRADES = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י", "יא", "יב"];
   const [name, setName] = useState("");
   const [subjectFilter, setSubjectFilter] = useState<string>("");
   const [newTopicSubject, setNewTopicSubject] = useState<string>("");
+  const [newTopicGrade, setNewTopicGrade] = useState<string>("");
+  const [newTopicSchool, setNewTopicSchool] = useState<string>("");
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+  const [editSchool, setEditSchool] = useState("");
 
-  const filtered = subjectFilter
+  const filtered = subjectFilter && subjectFilter !== "all"
     ? topics.filter((t) => String(t.subject_id) === subjectFilter)
     : topics;
 
   const add = async () => {
     if (!name.trim() || !newTopicSubject) return;
-    const { error } = await supabase.from("topics").insert({ name: name.trim(), subject_id: Number(newTopicSubject) });
+    const { error } = await supabase.from("topics").insert({
+      name: name.trim(),
+      subject_id: Number(newTopicSubject),
+      grade: newTopicGrade || null,
+      school_id: newTopicSchool && newTopicSchool !== "all" ? newTopicSchool : null,
+    });
     if (error) return toast({ title: "שגיאה", description: error.message, variant: "destructive" });
     setName("");
     reload();
     toast({ title: "נושא נוסף ✅" });
   };
 
+  const startEdit = (t: any) => {
+    setEditId(t.id);
+    setEditName(t.name);
+    setEditGrade(t.grade || "");
+    setEditSchool(t.school_id || "");
+  };
+
   const update = async () => {
     if (!editName.trim() || editId === null) return;
-    await supabase.from("topics").update({ name: editName.trim() }).eq("id", editId);
+    await supabase.from("topics").update({
+      name: editName.trim(),
+      grade: editGrade || null,
+      school_id: editSchool && editSchool !== "all" ? editSchool : null,
+    }).eq("id", editId);
     setEditId(null);
     reload();
     toast({ title: "עודכן ✅" });
@@ -412,6 +433,10 @@ function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; sub
   };
 
   const getSubjectName = (id: number) => subjects.find((s) => s.id === id)?.name || "—";
+  const getSchoolName = (id: string | null) => {
+    if (!id) return "הכל";
+    return schools.find((s: any) => s.id === id)?.name || "—";
+  };
 
   return (
     <>
@@ -430,12 +455,30 @@ function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; sub
             </div>
             <div>
               <Label>שם הנושא</Label>
-              <div className="flex gap-2">
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם הנושא" onKeyDown={(e) => e.key === "Enter" && add()} />
-                <Button onClick={add} className="shrink-0"><Plus className="h-4 w-4" /></Button>
-              </div>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם הנושא" onKeyDown={(e) => e.key === "Enter" && add()} />
+            </div>
+            <div>
+              <Label>כיתה (אופציונלי)</Label>
+              <Select value={newTopicGrade} onValueChange={setNewTopicGrade}>
+                <SelectTrigger><SelectValue placeholder="כל הכיתות" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל הכיתות</SelectItem>
+                  {GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>בית ספר (אופציונלי)</Label>
+              <Select value={newTopicSchool} onValueChange={setNewTopicSchool}>
+                <SelectTrigger><SelectValue placeholder="כל בתי הספר" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל בתי הספר</SelectItem>
+                  {schools.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          <Button onClick={add} className="gap-1"><Plus className="h-4 w-4" /> הוסף נושא</Button>
         </CardContent>
       </Card>
 
@@ -455,6 +498,8 @@ function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; sub
             <TableRow>
               <TableHead>נושא</TableHead>
               <TableHead>מקצוע</TableHead>
+              <TableHead>כיתה</TableHead>
+              <TableHead>בית ספר</TableHead>
               <TableHead className="w-28">פעולות</TableHead>
             </TableRow>
           </TableHeader>
@@ -463,9 +508,11 @@ function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; sub
               <TableRow key={t.id}>
                 <TableCell className="font-medium">{t.name}</TableCell>
                 <TableCell>{getSubjectName(t.subject_id)}</TableCell>
+                <TableCell>{t.grade || "הכל"}</TableCell>
+                <TableCell>{getSchoolName(t.school_id)}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => { setEditId(t.id); setEditName(t.name); }}>
+                    <Button variant="ghost" size="icon" onClick={() => startEdit(t)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => remove(t.id)}>
@@ -476,7 +523,7 @@ function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; sub
               </TableRow>
             ))}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">אין נושאים</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">אין נושאים</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -485,7 +532,32 @@ function TopicsSection({ topics, subjects, reload, toast }: { topics: any[]; sub
       <Dialog open={editId !== null} onOpenChange={(o) => !o && setEditId(null)}>
         <DialogContent dir="rtl">
           <DialogHeader><DialogTitle>עריכת נושא</DialogTitle></DialogHeader>
-          <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+          <div className="space-y-3">
+            <div>
+              <Label>שם</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <Label>כיתה</Label>
+              <Select value={editGrade} onValueChange={setEditGrade}>
+                <SelectTrigger><SelectValue placeholder="כל הכיתות" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל הכיתות</SelectItem>
+                  {GRADES.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>בית ספר</Label>
+              <Select value={editSchool} onValueChange={setEditSchool}>
+                <SelectTrigger><SelectValue placeholder="כל בתי הספר" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">כל בתי הספר</SelectItem>
+                  {schools.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <DialogFooter>
             <Button onClick={update}><Save className="h-4 w-4 ml-1" /> שמור</Button>
           </DialogFooter>
