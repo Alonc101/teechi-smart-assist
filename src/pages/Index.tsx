@@ -165,7 +165,7 @@ const Index = () => {
       // Create or get session, then save user message
       const currentSessionId = await getOrCreateSession();
 
-      const body: any = { message: msg, subjectId: selectedSubjectId, topicId: selectedTopicId };
+      const body: any = { message: msg, subjectId: selectedSubjectId, topicId: selectedTopicId, sessionId: currentSessionId };
       if (currentImage) {
         body.imageBase64 = currentImage;
       }
