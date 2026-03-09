@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { message, subjectId, topicId, imageBase64 } = await req.json();
+    const { message, subjectId, topicId, imageBase64, sessionId } = await req.json();
     if (!message || !subjectId || !topicId) {
       return new Response(JSON.stringify({ error: "message, subjectId, and topicId are required" }), {
         status: 400,
