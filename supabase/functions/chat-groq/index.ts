@@ -96,7 +96,25 @@ Deno.serve(async (req) => {
     console.log("System prompt length:", fullSystem.length);
     console.log("System prompt preview:", fullSystem.substring(0, 200));
 
-    // Build user content for Chat Completions API
+    // Fetch conversation history if session exists
+    let conversationHistory: { role: string; content: any }[] = [];
+    if (sessionId) {
+      const { data: historyMessages } = await supabase
+        .from("chat_messages")
+        .select("role, content")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true })
+        .limit(10);
+
+      if (historyMessages && historyMessages.length > 0) {
+        conversationHistory = historyMessages.map((m: any) => ({
+          role: m.role,
+          content: m.content,
+        }));
+      }
+    }
+
+    // Build current user message content
     let userContent: any;
     if (imageBase64) {
       userContent = [
@@ -107,7 +125,16 @@ Deno.serve(async (req) => {
       userContent = message;
     }
 
-    // Call OpenAI Chat Completions API with gpt-4o-mini
+    // Build messages array: system + history + current message
+    const aiMessages: any[] = [
+      { role: "system", content: fullSystem },
+      ...conversationHistory,
+      { role: "user", content: userContent },
+    ];
+
+    console.log("Sending", aiMessages.length, "messages to OpenAI (including system)");
+
+    // Call OpenAI Chat Completions API
     const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -116,10 +143,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages: [
-          { role: "system", content: fullSystem },
-          { role: "user", content: userContent },
-        ],
+        messages: aiMessages,
         temperature: 0.3,
         max_tokens: 600,
       }),
