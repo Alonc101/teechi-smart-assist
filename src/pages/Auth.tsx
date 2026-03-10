@@ -78,6 +78,7 @@ const Auth = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4" dir="rtl">
+      <img src={logoBy1} alt="לוגו באר יעקב" className="h-24 object-contain mb-6" />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center gap-2 text-3xl font-bold text-primary">
