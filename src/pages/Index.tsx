@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import byIcon from "@/assets/By-icon1.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
