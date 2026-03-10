@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, ChevronDown, ChevronLeft, BookOpen, LogOut, Shield, Settings } from "lucide-react";
+import { Search, ChevronDown, ChevronLeft, LogOut, Shield, Settings, LoaderPinwheel } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Subject {
@@ -87,7 +87,7 @@ const TopicSidebar = forwardRef<HTMLDivElement, TopicSidebarProps>(
         {/* Header */}
         <div className="border-b p-4">
           <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
+            <LoaderPinwheel className="h-5 w-5 text-primary" />
             מקצועות ונושאים
           </h2>
           <div className="relative">
