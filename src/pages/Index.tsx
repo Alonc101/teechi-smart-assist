@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import byIcon from "@/assets/By-icon1.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -223,7 +224,7 @@ const Index = () => {
             />
           </SheetContent>
         </Sheet>
-        <LoaderPinwheel className="h-6 w-6 text-primary-foreground" />
+        <img src={byIcon} alt="לוגו" className="h-7 w-7" />
         <h1 className="text-xl font-bold text-primary-foreground">Teechi</h1>
         {selectedTopicName && (
           <span className="mr-auto inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">

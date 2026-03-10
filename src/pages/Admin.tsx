@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import byIcon from "@/assets/By-icon1.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -119,7 +120,10 @@ const Admin = () => {
       >
         <div className="flex items-center justify-between border-b px-3 py-4">
           {!sidebarCollapsed && (
-            <h2 className="text-lg font-bold text-primary">Teechi Admin</h2>
+            <div className="flex items-center gap-2">
+              <img src={byIcon} alt="לוגו" className="h-6 w-6" />
+              <span className="text-lg font-bold text-primary">Teechi Admin</span>
+            </div>
           )}
           <Button
             variant="ghost"
