@@ -275,8 +275,8 @@ const Index = () => {
         )}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
-            <BookOpen className="h-16 w-16 text-primary/30" />
-            <h2 className="text-2xl font-bold text-foreground">שלום! 👋</h2>
+            <LoaderPinwheel className="h-16 w-16 text-primary/30" />
+            <h2 className="text-2xl font-bold text-foreground">שלום! <LoaderPinwheel className="inline h-7 w-7 text-primary" /></h2>
             <p className="text-muted-foreground max-w-sm">
               {selectedTopicName
                 ? `מוכן ללמוד ${selectedTopicName}? שאל אותי שאלה!`
