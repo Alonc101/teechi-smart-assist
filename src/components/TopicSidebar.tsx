@@ -87,7 +87,7 @@ const TopicSidebar = forwardRef<HTMLDivElement, TopicSidebarProps>(
         {/* Header */}
         <div className="border-b p-4">
           <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
+            <LoaderPinwheel className="h-5 w-5 text-primary" />
             מקצועות ונושאים
           </h2>
           <div className="relative">
