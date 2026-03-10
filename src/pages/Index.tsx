@@ -224,7 +224,9 @@ const Index = () => {
             />
           </SheetContent>
         </Sheet>
-        <img src={byIcon} alt="לוגו" className="h-7 w-7" />
+        <div className="bg-white rounded-lg p-1">
+          <img src={byIcon} alt="לוגו" className="h-7 w-7" />
+        </div>
         <h1 className="text-xl font-bold text-primary-foreground">Teechi</h1>
         {selectedTopicName && (
           <span className="mr-auto inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
