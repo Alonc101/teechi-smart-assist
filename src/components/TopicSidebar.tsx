@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Search, ChevronDown, ChevronLeft, BookOpen, LogOut, Shield, Settings } from "lucide-react";
+import { Search, ChevronDown, ChevronLeft, LogOut, Shield, Settings, LoaderPinwheel } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Subject {
