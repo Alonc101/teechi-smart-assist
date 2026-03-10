@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { LoaderPinwheel } from "lucide-react";
+import logoBy1 from "@/assets/logo-by1.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
