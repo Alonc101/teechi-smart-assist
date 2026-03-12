@@ -809,6 +809,10 @@ function PromptsSection({
 /* ========== Students ========== */
 function StudentsSection({ students, schools, reload, toast }: { students: any[]; schools: any[]; reload: () => void; toast: any }) {
   const [search, setSearch] = useState("");
+  const [authUsers, setAuthUsers] = useState<Record<string, { email: string; banned: boolean }>>({});
+  const [userRoles, setUserRoles] = useState<any[]>([]);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ action: string; userId: string; name: string } | null>(null);
 
   const filtered = students.filter((s) => s.student_name.includes(search));
   const getSchoolName = (id: string | null) => {
@@ -816,35 +820,196 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
     return schools.find((s) => s.id === id)?.name || "—";
   };
 
+  const isUserAdmin = (userId: string) => userRoles.some((r) => r.user_id === userId && r.role === "admin");
+  const isUserBanned = (userId: string) => authUsers[userId]?.banned ?? false;
+
+  const loadAuthUsers = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const { data } = await supabase.functions.invoke("admin-users", {
+      body: { action: "list", userId: "all" },
+    });
+    if (data?.users) setAuthUsers(data.users);
+  };
+
+  const loadRoles = async () => {
+    const { data } = await supabase.from("user_roles").select("*");
+    if (data) setUserRoles(data);
+  };
+
+  useEffect(() => {
+    loadAuthUsers();
+    loadRoles();
+  }, []);
+
+  const executeAction = async (action: string, userId: string) => {
+    setLoadingAction(userId + action);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-users", {
+        body: { action, userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const messages: Record<string, string> = {
+        ban: "המשתמש הושהה ✅",
+        unban: "המשתמש אושר ✅",
+        make_admin: "המשתמש הפך לאדמין ✅",
+        remove_admin: "הרשאת אדמין הוסרה ✅",
+        delete: "המשתמש נמחק ✅",
+      };
+      toast({ title: messages[action] || "בוצע ✅" });
+
+      if (action === "delete") {
+        reload();
+      }
+      await loadAuthUsers();
+      await loadRoles();
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    } finally {
+      setLoadingAction(null);
+      setConfirmAction(null);
+    }
+  };
+
   return (
     <>
-      <SectionHeader title="תלמידים" icon={Users} count={students.length} />
+      <SectionHeader title="ניהול תלמידים" icon={Users} count={students.length} />
       <SearchBar value={search} onChange={setSearch} />
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>שם</TableHead>
+              <TableHead>אימייל</TableHead>
               <TableHead>בית ספר</TableHead>
               <TableHead>כיתה</TableHead>
-              <TableHead>תאריך הצטרפות</TableHead>
+              <TableHead>סטטוס</TableHead>
+              <TableHead>תפקיד</TableHead>
+              <TableHead className="w-40">פעולות</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.student_name}</TableCell>
-                <TableCell>{getSchoolName(s.school_id)}</TableCell>
-                <TableCell>{s.grade || "—"}</TableCell>
-                <TableCell>{new Date(s.created_at).toLocaleDateString("he-IL")}</TableCell>
-              </TableRow>
-            ))}
+            {filtered.map((s) => {
+              const banned = isUserBanned(s.user_id);
+              const admin = isUserAdmin(s.user_id);
+              const email = authUsers[s.user_id]?.email || "—";
+              return (
+                <TableRow key={s.id} className={banned ? "opacity-60" : ""}>
+                  <TableCell className="font-medium">{s.student_name}</TableCell>
+                  <TableCell className="text-xs">{email}</TableCell>
+                  <TableCell>{getSchoolName(s.school_id)}</TableCell>
+                  <TableCell>{s.grade || "—"}</TableCell>
+                  <TableCell>
+                    {banned ? (
+                      <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">מושהה</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">פעיל</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {admin ? (
+                      <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">אדמין</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">תלמיד</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 flex-wrap">
+                      {banned ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          disabled={!!loadingAction}
+                          onClick={() => executeAction("unban", s.user_id)}
+                        >
+                          {loadingAction === s.user_id + "unban" ? <Loader2 className="h-3 w-3 animate-spin" /> : "אשר"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          disabled={!!loadingAction}
+                          onClick={() => setConfirmAction({ action: "ban", userId: s.user_id, name: s.student_name })}
+                        >
+                          השהה
+                        </Button>
+                      )}
+                      {admin ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          disabled={!!loadingAction}
+                          onClick={() => setConfirmAction({ action: "remove_admin", userId: s.user_id, name: s.student_name })}
+                        >
+                          הסר אדמין
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7"
+                          disabled={!!loadingAction}
+                          onClick={() => setConfirmAction({ action: "make_admin", userId: s.user_id, name: s.student_name })}
+                        >
+                          הפוך לאדמין
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={!!loadingAction}
+                        onClick={() => setConfirmAction({ action: "delete", userId: s.user_id, name: s.student_name })}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-8">אין תלמידים</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">אין תלמידים</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </Card>
+
+      {/* Confirm Dialog */}
+      <Dialog open={!!confirmAction} onOpenChange={(o) => !o && setConfirmAction(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAction?.action === "ban" && "השהיית משתמש"}
+              {confirmAction?.action === "make_admin" && "הפיכה לאדמין"}
+              {confirmAction?.action === "remove_admin" && "הסרת הרשאת אדמין"}
+              {confirmAction?.action === "delete" && "מחיקת משתמש"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {confirmAction?.action === "ban" && `האם אתה בטוח שברצונך להשהות את "${confirmAction.name}"?`}
+            {confirmAction?.action === "make_admin" && `האם להפוך את "${confirmAction?.name}" לאדמין?`}
+            {confirmAction?.action === "remove_admin" && `האם להסיר הרשאת אדמין מ-"${confirmAction?.name}"?`}
+            {confirmAction?.action === "delete" && `האם אתה בטוח שברצונך למחוק את "${confirmAction?.name}"? פעולה זו בלתי הפיכה.`}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmAction(null)}>ביטול</Button>
+            <Button
+              variant={confirmAction?.action === "delete" ? "destructive" : "default"}
+              onClick={() => confirmAction && executeAction(confirmAction.action, confirmAction.userId)}
+              disabled={!!loadingAction}
+            >
+              {loadingAction ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
+              אישור
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
