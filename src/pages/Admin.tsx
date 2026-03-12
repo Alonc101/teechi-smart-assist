@@ -809,7 +809,7 @@ function PromptsSection({
 /* ========== Students ========== */
 function StudentsSection({ students, schools, reload, toast }: { students: any[]; schools: any[]; reload: () => void; toast: any }) {
   const [search, setSearch] = useState("");
-  const [authUsers, setAuthUsers] = useState<Record<string, { email: string; banned: boolean }>>({});
+  const [authUsers, setAuthUsers] = useState<Record<string, { email: string; banned: boolean; email_confirmed: boolean }>>({});
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ action: string; userId: string; name: string } | null>(null);
