@@ -887,8 +887,10 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
               <TableHead>אימייל</TableHead>
               <TableHead>בית ספר</TableHead>
               <TableHead>כיתה</TableHead>
+              <TableHead>אימייל מאומת</TableHead>
               <TableHead>סטטוס</TableHead>
               <TableHead>תפקיד</TableHead>
+              <TableHead className="w-44">פעולות</TableHead>
               <TableHead className="w-40">פעולות</TableHead>
             </TableRow>
           </TableHeader>
