@@ -907,6 +907,13 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
                   <TableCell>{getSchoolName(s.school_id)}</TableCell>
                   <TableCell>{s.grade || "—"}</TableCell>
                   <TableCell>
+                    {emailConfirmed ? (
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">מאומת</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-600">ממתין</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {banned ? (
                       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">מושהה</span>
                     ) : (
