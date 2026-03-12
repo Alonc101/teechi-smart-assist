@@ -898,6 +898,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
             {filtered.map((s) => {
               const banned = isUserBanned(s.user_id);
               const admin = isUserAdmin(s.user_id);
+              const emailConfirmed = isEmailConfirmed(s.user_id);
               const email = authUsers[s.user_id]?.email || "—";
               return (
                 <TableRow key={s.id} className={banned ? "opacity-60" : ""}>
