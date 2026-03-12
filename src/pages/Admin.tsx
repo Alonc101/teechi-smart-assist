@@ -858,6 +858,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
         make_admin: "המשתמש הפך לאדמין ✅",
         remove_admin: "הרשאת אדמין הוסרה ✅",
         delete: "המשתמש נמחק ✅",
+        confirm_email: "האימייל אושר ✅",
       };
       toast({ title: messages[action] || "בוצע ✅" });
 
