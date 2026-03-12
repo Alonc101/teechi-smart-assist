@@ -822,6 +822,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
 
   const isUserAdmin = (userId: string) => userRoles.some((r) => r.user_id === userId && r.role === "admin");
   const isUserBanned = (userId: string) => authUsers[userId]?.banned ?? false;
+  const isEmailConfirmed = (userId: string) => authUsers[userId]?.email_confirmed ?? true;
 
   const loadAuthUsers = async () => {
     const { data: { session } } = await supabase.auth.getSession();
