@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
         });
         if (error) throw error;
         
-        const userMap: Record<string, { email: string; banned: boolean; created_at: string }> = {};
+        const userMap: Record<string, { email: string; banned: boolean; email_confirmed: boolean; created_at: string }> = {};
         for (const u of users) {
           userMap[u.id] = {
             email: u.email || "",
