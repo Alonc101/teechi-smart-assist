@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
           userMap[u.id] = {
             email: u.email || "",
             banned: !!u.banned_until && new Date(u.banned_until) > new Date(),
+            email_confirmed: !!u.email_confirmed_at,
             created_at: u.created_at,
           };
         }
