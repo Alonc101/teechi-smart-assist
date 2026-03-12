@@ -929,6 +929,17 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 flex-wrap">
+                      {!emailConfirmed && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                          disabled={!!loadingAction}
+                          onClick={() => executeAction("confirm_email", s.user_id)}
+                        >
+                          {loadingAction === s.user_id + "confirm_email" ? <Loader2 className="h-3 w-3 animate-spin" /> : "אמת מייל"}
+                        </Button>
+                      )}
                       {banned ? (
                         <Button
                           variant="outline"
