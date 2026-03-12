@@ -809,7 +809,7 @@ function PromptsSection({
 /* ========== Students ========== */
 function StudentsSection({ students, schools, reload, toast }: { students: any[]; schools: any[]; reload: () => void; toast: any }) {
   const [search, setSearch] = useState("");
-  const [authUsers, setAuthUsers] = useState<Record<string, { email: string; banned: boolean }>>({});
+  const [authUsers, setAuthUsers] = useState<Record<string, { email: string; banned: boolean; email_confirmed: boolean }>>({});
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ action: string; userId: string; name: string } | null>(null);
@@ -822,6 +822,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
 
   const isUserAdmin = (userId: string) => userRoles.some((r) => r.user_id === userId && r.role === "admin");
   const isUserBanned = (userId: string) => authUsers[userId]?.banned ?? false;
+  const isEmailConfirmed = (userId: string) => authUsers[userId]?.email_confirmed ?? true;
 
   const loadAuthUsers = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -857,6 +858,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
         make_admin: "המשתמש הפך לאדמין ✅",
         remove_admin: "הרשאת אדמין הוסרה ✅",
         delete: "המשתמש נמחק ✅",
+        confirm_email: "האימייל אושר ✅",
       };
       toast({ title: messages[action] || "בוצע ✅" });
 
@@ -885,8 +887,10 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
               <TableHead>אימייל</TableHead>
               <TableHead>בית ספר</TableHead>
               <TableHead>כיתה</TableHead>
+              <TableHead>אימייל מאומת</TableHead>
               <TableHead>סטטוס</TableHead>
               <TableHead>תפקיד</TableHead>
+              <TableHead className="w-44">פעולות</TableHead>
               <TableHead className="w-40">פעולות</TableHead>
             </TableRow>
           </TableHeader>
@@ -894,6 +898,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
             {filtered.map((s) => {
               const banned = isUserBanned(s.user_id);
               const admin = isUserAdmin(s.user_id);
+              const emailConfirmed = isEmailConfirmed(s.user_id);
               const email = authUsers[s.user_id]?.email || "—";
               return (
                 <TableRow key={s.id} className={banned ? "opacity-60" : ""}>
@@ -901,6 +906,13 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
                   <TableCell className="text-xs">{email}</TableCell>
                   <TableCell>{getSchoolName(s.school_id)}</TableCell>
                   <TableCell>{s.grade || "—"}</TableCell>
+                  <TableCell>
+                    {emailConfirmed ? (
+                      <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">מאומת</span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-600">ממתין</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {banned ? (
                       <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">מושהה</span>
@@ -917,6 +929,17 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1 flex-wrap">
+                      {!emailConfirmed && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-7 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                          disabled={!!loadingAction}
+                          onClick={() => executeAction("confirm_email", s.user_id)}
+                        >
+                          {loadingAction === s.user_id + "confirm_email" ? <Loader2 className="h-3 w-3 animate-spin" /> : "אמת מייל"}
+                        </Button>
+                      )}
                       {banned ? (
                         <Button
                           variant="outline"
@@ -974,7 +997,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
               );
             })}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">אין תלמידים</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">אין תלמידים</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

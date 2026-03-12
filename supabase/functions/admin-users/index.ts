@@ -110,6 +110,15 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "confirm_email": {
+        const { data, error } = await adminClient.auth.admin.updateUserById(userId, {
+          email_confirm: true,
+        });
+        if (error) throw error;
+        result = { success: true, message: "Email confirmed" };
+        break;
+      }
+
       case "delete": {
         // Delete student record first
         await adminClient.from("students").delete().eq("user_id", userId);
@@ -129,11 +138,12 @@ Deno.serve(async (req) => {
         });
         if (error) throw error;
         
-        const userMap: Record<string, { email: string; banned: boolean; created_at: string }> = {};
+        const userMap: Record<string, { email: string; banned: boolean; email_confirmed: boolean; created_at: string }> = {};
         for (const u of users) {
           userMap[u.id] = {
             email: u.email || "",
             banned: !!u.banned_until && new Date(u.banned_until) > new Date(),
+            email_confirmed: !!u.email_confirmed_at,
             created_at: u.created_at,
           };
         }
