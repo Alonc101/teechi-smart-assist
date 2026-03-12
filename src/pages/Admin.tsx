@@ -997,7 +997,7 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
               );
             })}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">אין תלמידים</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">אין תלמידים</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
