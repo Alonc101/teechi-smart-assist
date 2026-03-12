@@ -110,6 +110,15 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "confirm_email": {
+        const { data, error } = await adminClient.auth.admin.updateUserById(userId, {
+          email_confirm: true,
+        });
+        if (error) throw error;
+        result = { success: true, message: "Email confirmed" };
+        break;
+      }
+
       case "delete": {
         // Delete student record first
         await adminClient.from("students").delete().eq("user_id", userId);
