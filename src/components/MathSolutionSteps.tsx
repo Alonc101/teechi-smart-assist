@@ -1,37 +1,44 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronLeft, Lightbulb, CheckCircle2 } from "lucide-react";
+import { ChevronDown, Lightbulb, CheckCircle2, HelpCircle, PencilLine, MessageCircle } from "lucide-react";
 import MathMessage from "./MathMessage";
 
+type BlockType = "step" | "final" | "hint" | "try" | "question";
+
 interface Step {
+  type: BlockType;
   title: string;
   content: string;
   question?: string;
-  isFinal?: boolean;
 }
 
-function parseSteps(text: string): Step[] | null {
-  const stepRegex = /###(STEP|FINAL)###\s*(.*)/g;
-  const questionRegex = /###QUESTION###\s*(.*)/;
-  const parts: Step[] = [];
+// ──────────────────────────────────────────────
+// Parser: handles ###STEP###, ###FINAL###, ###HINT###, ###TRY###, ###QUESTION###
+// Falls back gracefully to plain text for conversational responses
+// ──────────────────────────────────────────────
 
-  const blocks = text.split(/(?=###(?:STEP|FINAL)###)/);
+function parseSteps(text: string): Step[] | null {
+  // Split at any known block marker
+  const blocks = text.split(/(?=###(?:STEP|FINAL|HINT|TRY)###)/);
+  const parts: Step[] = [];
 
   for (const block of blocks) {
     const trimmed = block.trim();
     if (!trimmed) continue;
 
-    const headerMatch = trimmed.match(/^###(STEP|FINAL)###\s*(.*)/);
+    const headerMatch = trimmed.match(/^###(STEP|FINAL|HINT|TRY)###\s*(.*)/);
     if (!headerMatch) {
-      // Not structured - return null to fall back to plain rendering
+      // Text before any marker — skip if we haven't started, otherwise ignore
       if (parts.length === 0) return null;
       continue;
     }
 
-    const isFinal = headerMatch[1] === "FINAL";
+    const rawType = headerMatch[1].toLowerCase() as BlockType;
     const title = headerMatch[2].trim();
     const rest = trimmed.slice(headerMatch[0].length).trim();
 
+    // Extract inline ###QUESTION### if present
+    const questionRegex = /###QUESTION###\s*(.*)/;
     const questionMatch = rest.match(questionRegex);
     let content = rest;
     let question: string | undefined;
@@ -41,11 +48,16 @@ function parseSteps(text: string): Step[] | null {
       question = questionMatch[1].trim();
     }
 
-    parts.push({ title, content, question, isFinal });
+    parts.push({ type: rawType, title, content, question });
   }
 
-  return parts.length >= 2 ? parts : null;
+  // Need at least 1 block to use structured rendering
+  return parts.length >= 1 ? parts : null;
 }
+
+// ──────────────────────────────────────────────
+// Component
+// ──────────────────────────────────────────────
 
 interface MathSolutionStepsProps {
   text: string;
@@ -61,16 +73,47 @@ export default function MathSolutionSteps({ text }: MathSolutionStepsProps) {
   return <StepRenderer steps={steps} />;
 }
 
+// ──────────────────────────────────────────────
+// Block styles per type
+// ──────────────────────────────────────────────
+
+const blockStyles: Record<BlockType, { border: string; bg: string; iconBg: string; iconColor: string }> = {
+  step:     { border: "border-border",       bg: "bg-card",        iconBg: "bg-muted",       iconColor: "text-muted-foreground" },
+  final:    { border: "border-primary/30",   bg: "bg-primary/5",   iconBg: "bg-primary",     iconColor: "text-primary-foreground" },
+  hint:     { border: "border-yellow-300/50", bg: "bg-yellow-50",  iconBg: "bg-yellow-400",  iconColor: "text-white" },
+  try:      { border: "border-blue-300/50",  bg: "bg-blue-50",     iconBg: "bg-blue-500",    iconColor: "text-white" },
+  question: { border: "border-purple-300/50", bg: "bg-purple-50",  iconBg: "bg-purple-500",  iconColor: "text-white" },
+};
+
+function BlockIcon({ type, index }: { type: BlockType; index: number }) {
+  const size = "h-3.5 w-3.5";
+  switch (type) {
+    case "final":    return <CheckCircle2 className={size} />;
+    case "hint":     return <Lightbulb className={size} />;
+    case "try":      return <PencilLine className={size} />;
+    case "question": return <HelpCircle className={size} />;
+    default:         return <>{index + 1}</>;
+  }
+}
+
+// ──────────────────────────────────────────────
+// Renderer with progressive reveal
+// ──────────────────────────────────────────────
+
 function StepRenderer({ steps }: { steps: Step[] }) {
-  const [visibleCount, setVisibleCount] = useState(1);
+  // For a single block (like a hint or question), show it immediately
+  const isSingleBlock = steps.length === 1;
+  const [visibleCount, setVisibleCount] = useState(isSingleBlock ? 1 : 1);
   const [showQuestion, setShowQuestion] = useState<number | null>(0);
 
   const allRevealed = visibleCount >= steps.length;
 
+  // Count only "step" type blocks for numbering
+  let stepCounter = 0;
+
   const revealNext = () => {
     setShowQuestion(null);
     setVisibleCount((prev) => Math.min(prev + 1, steps.length));
-    // Show the question for the newly revealed step after a brief delay
     setTimeout(() => {
       if (visibleCount < steps.length) {
         setShowQuestion(visibleCount);
@@ -80,43 +123,43 @@ function StepRenderer({ steps }: { steps: Step[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {steps.slice(0, visibleCount).map((step, i) => (
-        <div
-          key={i}
-          className={`rounded-xl border p-3 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${
-            step.isFinal
-              ? "border-primary/30 bg-primary/5"
-              : "border-border bg-card"
-          }`}
-        >
-          {/* Step header */}
-          <div className="flex items-center gap-2 mb-2">
-            <div
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                step.isFinal
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {step.isFinal ? <CheckCircle2 className="h-3.5 w-3.5" /> : i + 1}
-            </div>
-            <span className="text-sm font-semibold text-foreground">{step.title}</span>
-          </div>
+      {steps.slice(0, visibleCount).map((step, i) => {
+        if (step.type === "step") stepCounter++;
+        const displayIndex = stepCounter;
+        const style = blockStyles[step.type] || blockStyles.step;
 
-          {/* Step content */}
-          <div className="mr-8 text-sm">
-            <MathMessage text={step.content} />
-          </div>
-
-          {/* Guiding question */}
-          {step.question && i === showQuestion && !step.isFinal && (
-            <div className="mr-8 mt-3 flex items-start gap-2 rounded-lg bg-accent/50 p-2.5 text-sm animate-in fade-in duration-300">
-              <Lightbulb className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-              <span className="text-accent-foreground">{step.question}</span>
+        return (
+          <div
+            key={i}
+            className={`rounded-xl border p-3 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${style.border} ${style.bg}`}
+          >
+            {/* Block header */}
+            <div className="flex items-center gap-2 mb-2">
+              <div
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.iconBg} ${style.iconColor}`}
+              >
+                <BlockIcon type={step.type} index={displayIndex - 1} />
+              </div>
+              <span className="text-sm font-semibold text-foreground">{step.title}</span>
             </div>
-          )}
-        </div>
-      ))}
+
+            {/* Block content */}
+            {step.content && (
+              <div className="mr-8 text-sm">
+                <MathMessage text={step.content} />
+              </div>
+            )}
+
+            {/* Guiding question */}
+            {step.question && i === showQuestion && step.type !== "final" && (
+              <div className="mr-8 mt-3 flex items-start gap-2 rounded-lg bg-accent/50 p-2.5 text-sm animate-in fade-in duration-300">
+                <MessageCircle className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                <span className="text-accent-foreground">{step.question}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* Next step button */}
       {!allRevealed && (

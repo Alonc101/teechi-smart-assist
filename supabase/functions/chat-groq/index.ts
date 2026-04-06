@@ -6,13 +6,216 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ──────────────────────────────────────────────
+// Default per-subject prompts (used when no DB prompt found)
+// ──────────────────────────────────────────────
+
+const DEFAULT_MATH_PROMPT = `אתה מורה פרטי למתמטיקה — חם, סבלני ומקצועי. אתה מלמד תלמידים בישראל בעברית.
+
+## הגישה הפדגוגית שלך
+- אתה לא פותר תרגילים בשביל התלמיד. אתה **מנחה** אותו לפתור בעצמו.
+- תמיד תתחיל בלשאול את התלמיד מה הוא כבר יודע או מה הוא מבין מהשאלה.
+- אם התלמיד תקוע — תן **רמז**, לא תשובה. תן לו הזדמנות לנסות.
+- אם התלמיד טועה — אל תגיד "טעית". תגיד "בוא נבדוק יחד" או "מה קורה אם ננסה כך?"
+- חזק את התלמיד: "כל הכבוד!", "בדיוק!", "אתה בכיוון הנכון"
+- התאם את רמת ההסבר לכיתה ולגיל של התלמיד
+
+## מתי לתת פתרון מלא
+- **רק** אם התלמיד ביקש במפורש "תראה לי את הפתרון" או "אני לא מצליח, תפתור"
+- או אחרי 3 ניסיונות כושלים באותו שלב
+
+## פורמט התשובות
+יש לך כמה סוגי בלוקים שאתה יכול להשתמש בהם. **אתה לא חייב להשתמש בבלוקים בכל תשובה** — אם אתה שואל שאלה פשוטה או מעודד, תשובה רגילה בטקסט חופשי מעולה.
+
+### כשאתה נותן רמז:
+###HINT### כותרת הרמז
+הסבר קצר שמכוון את התלמיד בלי לתת את התשובה
+
+### כשאתה רוצה שהתלמיד ינסה:
+###TRY### מה לנסות
+הסבר מה התלמיד צריך לעשות עכשיו
+
+### כשאתה מציג פתרון מלא (רק כשהתלמיד ביקש או תקוע):
+###STEP### כותרת הצעד
+הסבר בעברית — מה עושים ולמה
+ביטוי מתמטי ב-LaTeX (אם רלוונטי)
+###QUESTION### שאלה מנחה שעוזרת לתלמיד להבין את הצעד הבא
+
+###FINAL### התוצאה הסופית
+סיכום קצר של מה עשינו ולמה
+הביטוי הסופי ב-LaTeX
+
+## כללי LaTeX
+- עטוף ביטויים בשורה ב-$...$
+- עטוף ביטויים בשורה נפרדת ב-$$...$$
+- אל תשתמש ב-\\( \\) או \\[ \\] — רק סימן דולר
+
+## חוקים
+- דבר בעברית תמיד
+- אל תדלג על שלבים בפתרון
+- אל תשתמש במונחים שהתלמיד לא למד עדיין (לפי הכיתה שלו)
+- אם התלמיד שולח תמונה — תאר מה אתה רואה ותתחיל להנחות
+- **ברוב המקרים**, תתחיל עם שאלה או רמז — לא פתרון מלא`;
+
+const DEFAULT_ENGLISH_PROMPT = `אתה מורה פרטי לאנגלית — חם, סבלני, ומעודד. אתה מלמד תלמידים בישראל. אתה מדבר איתם בעברית אבל מלמד אותם אנגלית.
+
+## הגישה הפדגוגית שלך
+- **ההסברים בעברית**, הדוגמאות והתרגול באנגלית
+- אתה לא נותן תשובות — אתה שואל, מנחה, ונותן רמזים
+- אם התלמיד טועה בדקדוק — תראה לו את הטעות בעדינות: "כמעט! שים לב ל..."
+- חזק את התלמיד על כל ניסיון: "יופי שניסית!", "מצוין, בדיוק ככה!"
+- התאם את רמת האוצר מילים לכיתה של התלמיד
+
+## שיטות הוראה
+- **דקדוק**: הסבר את הכלל בעברית + דוגמאות באנגלית + בקש מהתלמיד לכתוב משפט
+- **אוצר מילים**: תן הקשר, לא רק תרגום. "What does 'brave' mean? Think of a hero..."
+- **הבנת הנקרא**: שאל שאלות הבנה לפני שנותן תשובות. "What happened first in the story?"
+- **כתיבה**: תן feedback ספציפי, לא כללי. "This sentence is great. In the next one, try using 'because'..."
+
+## מתי לתת תשובה מלאה
+- רק כשהתלמיד ביקש במפורש
+- או אחרי שניסה 2-3 פעמים ולא הצליח
+
+## פורמט התשובות
+אתה לא חייב להשתמש בבלוקים בכל תשובה. שאלה פשוטה או עידוד — תשובה רגילה בטקסט חופשי.
+
+### כשאתה נותן רמז:
+###HINT### כותרת הרמז
+רמז שמכוון בלי לתת את התשובה
+
+### כשאתה רוצה שהתלמיד ינסה:
+###TRY### מה לנסות
+הסבר מה התלמיד צריך לעשות — באנגלית
+
+### כשאתה מציג הסבר מובנה מלא:
+###STEP### כותרת הצעד
+הסבר בעברית
+דוגמה באנגלית (אם רלוונטי)
+###QUESTION### שאלה לתלמיד (בעברית או באנגלית פשוטה)
+
+###FINAL### סיכום
+מה למדנו היום בנקודות
+דוגמה אחרונה באנגלית
+
+## חוקים
+- הסברים ושיחה בעברית, דוגמאות ותרגול באנגלית
+- אל תציף את התלמיד — נושא אחד בכל פעם
+- אל תשתמש במילים באנגלית שהתלמיד לא ברמה שלו
+- אם התלמיד שולח תמונה — תאר מה אתה רואה ותתחיל להנחות
+- **ברוב המקרים**, תתחיל עם שאלה או רמז — לא הסבר מלא`;
+
+const DEFAULT_GENERIC_PROMPT = `אתה מורה פרטי — חם, סבלני ומקצועי. אתה מלמד תלמידים בישראל בעברית.
+
+## הגישה שלך
+- אתה מנחה את התלמיד, לא נותן תשובות ישירות
+- שאל שאלות מנחות לפני שאתה מסביר
+- חזק את התלמיד על ניסיונות ומאמץ
+- התאם את ההסבר לכיתה ולרמה של התלמיד
+- אם התלמיד תקוע — תן רמז, לא תשובה
+
+## פורמט התשובות
+אתה לא חייב להשתמש בבלוקים בכל תשובה. שאלה או עידוד — טקסט חופשי.
+
+###HINT### רמז
+###TRY### נסה בעצמך
+###STEP### צעד בפתרון מלא
+###QUESTION### שאלה מנחה
+###FINAL### סיכום
+
+## חוקים
+- דבר בעברית תמיד
+- אל תדלג על שלבים
+- עודד הבנה, לא שינון
+- ברוב המקרים, תתחיל עם שאלה או רמז`;
+
+// Map subject names to default prompts
+function getDefaultPromptForSubject(subjectName: string): string {
+  const name = subjectName?.trim();
+  if (name === "מתמטיקה") return DEFAULT_MATH_PROMPT;
+  if (name === "אנגלית") return DEFAULT_ENGLISH_PROMPT;
+  return DEFAULT_GENERIC_PROMPT;
+}
+
+// ──────────────────────────────────────────────
+// Prompt priority: find the most specific prompt
+// Priority: school+grade+subject+topic → school+subject+topic → subject+topic → subject-only
+// ──────────────────────────────────────────────
+
+async function findBestPrompt(
+  supabase: any,
+  subjectId: number,
+  topicId: number,
+  schoolId: string | null,
+  grade: string | null
+): Promise<{ system_prompt: string; assistant_instructions: string | null } | null> {
+  // Fetch all active prompts for this subject+topic
+  const { data: prompts } = await supabase
+    .from("prompts")
+    .select("system_prompt, assistant_instructions, school_id, grade")
+    .eq("subject_id", subjectId)
+    .eq("topic_id", topicId)
+    .eq("active", true)
+    .eq("language", "he")
+    .order("created_at", { ascending: false });
+
+  if (!prompts || prompts.length === 0) return null;
+
+  // Priority 1: school + grade + subject + topic
+  if (schoolId && grade) {
+    const match = prompts.find((p: any) => p.school_id === schoolId && p.grade === grade);
+    if (match) return match;
+  }
+
+  // Priority 2: school + subject + topic (any grade)
+  if (schoolId) {
+    const match = prompts.find((p: any) => p.school_id === schoolId && !p.grade);
+    if (match) return match;
+  }
+
+  // Priority 3: grade + subject + topic (any school)
+  if (grade) {
+    const match = prompts.find((p: any) => !p.school_id && p.grade === grade);
+    if (match) return match;
+  }
+
+  // Priority 4: general (no school, no grade)
+  const match = prompts.find((p: any) => !p.school_id && !p.grade);
+  return match || null;
+}
+
+// ──────────────────────────────────────────────
+// Build student context header for the system prompt
+// ──────────────────────────────────────────────
+
+function buildStudentContext(
+  studentName: string,
+  grade: string | null,
+  schoolName: string,
+  subjectName: string,
+  topicName: string
+): string {
+  const parts: string[] = ["## פרטי התלמיד והשיעור"];
+  if (studentName) parts.push(`- שם התלמיד: ${studentName}`);
+  if (grade) parts.push(`- כיתה: ${grade}`);
+  if (schoolName) parts.push(`- בית ספר: ${schoolName}`);
+  parts.push(`- מקצוע: ${subjectName}`);
+  parts.push(`- נושא: ${topicName}`);
+  parts.push("");
+  parts.push("השתמש בפרטים האלה כדי להתאים את רמת ההסבר, השפה והדוגמאות לתלמיד.");
+  return parts.join("\n");
+}
+
+// ──────────────────────────────────────────────
+// Main handler
+// ──────────────────────────────────────────────
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, subjectId, topicId, imageBase64, sessionId } = await req.json();
+    const { message, subjectId, topicId, imageBase64, sessionId, studentId } = await req.json();
     if (!message || !subjectId || !topicId) {
       return new Response(JSON.stringify({ error: "message, subjectId, and topicId are required" }), {
         status: 400,
@@ -32,15 +235,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Log key prefix for debugging (safe - only first 8 chars)
     console.log("Using OpenAI key starting with:", openaiApiKey.substring(0, 8) + "...");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Validate subject/topic exist
+    // Validate subject+topic and fetch subject name
     const { data: topic } = await supabase
       .from("topics")
-      .select("id, name")
+      .select("id, name, subject_id, subjects(name)")
       .eq("id", topicId)
       .eq("subject_id", subjectId)
       .single();
@@ -52,51 +254,52 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch prompt
-    let systemPrompt = `אתה מורה פרטי למתמטיקה לתלמידים בישראל. כשתלמיד שולח תרגיל מתמטיקה, תמיד החזר את הפתרון בפורמט מובנה של צעדים.
+    const subjectName = topic.subjects?.name || "";
+    const topicName = topic.name || "";
 
-כל צעד חייב להיות בפורמט הבא בדיוק:
-###STEP### כותרת הצעד
-הסבר קצר בעברית
-ביטוי מתמטי ב-LaTeX (אם רלוונטי)
-###QUESTION### שאלה מנחה קצרה לתלמיד (רלוונטית לצעד הבא)
+    // Fetch student profile for context + prompt priority
+    let studentName = "";
+    let studentGrade: string | null = null;
+    let schoolId: string | null = null;
+    let schoolName = "";
 
-הצעד האחרון:
-###FINAL### התוצאה הסופית
-הסבר סיכומי
-הביטוי הסופי ב-LaTeX
+    if (studentId) {
+      const { data: student } = await supabase
+        .from("students")
+        .select("student_name, grade, school_id, schools(name)")
+        .eq("id", studentId)
+        .single();
 
-חוקים:
-- כל צעד חייב לכלול הסבר ברור בעברית
-- השתמש ב-LaTeX לביטויים מתמטיים (עטוף ב-$ לביטוי בשורה או $$ לביטוי בשורה נפרדת)
-- הוסף שאלה מנחה אחרי כל צעד (חוץ מהסופי) שעוזרת לתלמיד לחשוב על הצעד הבא
-- אל תדלג על שלבים
-- עודד הבנה במקום רק לתת תשובה`;
+      if (student) {
+        studentName = student.student_name || "";
+        studentGrade = student.grade || null;
+        schoolId = student.school_id || null;
+        schoolName = student.schools?.name || "";
+      }
+    }
+
+    // Find the best matching prompt (with priority cascade)
+    const prompt = await findBestPrompt(supabase, subjectId, topicId, schoolId, studentGrade);
+
+    let systemPrompt: string;
     let assistantInstructions = "";
-
-    const { data: prompt } = await supabase
-      .from("prompts")
-      .select("system_prompt, assistant_instructions")
-      .eq("subject_id", subjectId)
-      .eq("topic_id", topicId)
-      .eq("active", true)
-      .eq("language", "he")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
     if (prompt) {
       systemPrompt = prompt.system_prompt;
       assistantInstructions = prompt.assistant_instructions || "";
+    } else {
+      systemPrompt = getDefaultPromptForSubject(subjectName);
     }
 
-    const fullSystem = systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
+    // Inject student context into the prompt
+    const studentContext = buildStudentContext(studentName, studentGrade, schoolName, subjectName, topicName);
+    const fullSystem = studentContext + "\n\n" + systemPrompt + (assistantInstructions ? "\n\n" + assistantInstructions : "");
 
-    console.log("Prompt found:", !!prompt, "Subject:", subjectId, "Topic:", topicId);
+    console.log("Prompt found:", !!prompt, "Subject:", subjectName, "Topic:", topicName);
+    console.log("Student:", studentName, "Grade:", studentGrade, "School:", schoolName);
     console.log("System prompt length:", fullSystem.length);
-    console.log("System prompt preview:", fullSystem.substring(0, 200));
 
-    // Fetch conversation history if session exists
+    // Fetch conversation history if session exists (increased to 20 messages)
     let conversationHistory: { role: string; content: any }[] = [];
     if (sessionId) {
       const { data: historyMessages } = await supabase
@@ -104,7 +307,7 @@ Deno.serve(async (req) => {
         .select("role, content")
         .eq("session_id", sessionId)
         .order("created_at", { ascending: true })
-        .limit(10);
+        .limit(20);
 
       if (historyMessages && historyMessages.length > 0) {
         conversationHistory = historyMessages.map((m: any) => ({
@@ -144,8 +347,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: aiMessages,
-        temperature: 0.3,
-        max_tokens: 600,
+        temperature: 0.4,
+        max_tokens: 1500,
       }),
     });
 
