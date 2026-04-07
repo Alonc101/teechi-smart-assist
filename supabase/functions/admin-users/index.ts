@@ -74,33 +74,22 @@ Deno.serve(async (req) => {
       }
 
       // Create auth user with confirmed email
+      // Pass student data via user_metadata so the handle_new_user trigger picks it up
       const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
+        user_metadata: {
+          student_name: studentName,
+          grade: grade || null,
+          school_id: schoolId || null,
+        },
       });
       if (createError) throw createError;
       if (!newUser?.user) throw new Error("Failed to create user");
 
-      const newUserId = newUser.user.id;
-
-      // Create student profile
-      const { error: studentError } = await adminClient
-        .from("students")
-        .insert({
-          user_id: newUserId,
-          student_name: studentName,
-          grade: grade || null,
-          school_id: schoolId || null,
-        });
-      if (studentError) throw studentError;
-
-      // Add student role
-      await adminClient
-        .from("user_roles")
-        .insert({ user_id: newUserId, role: "student" });
-
-      result = { success: true, message: "User created", userId: newUserId };
+      // The handle_new_user trigger automatically creates the student profile and student role
+      result = { success: true, message: "User created", userId: newUser.user.id };
 
     } else {
       // ── All other actions require userId ──
