@@ -813,6 +813,9 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
   const [userRoles, setUserRoles] = useState<any[]>([]);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ action: string; userId: string; name: string } | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [newStudent, setNewStudent] = useState({ email: "", password: "", studentName: "", grade: "", schoolId: "" });
+  const [creating, setCreating] = useState(false);
 
   const filtered = students.filter((s) => s.student_name.includes(search));
   const getSchoolName = (id: string | null) => {
@@ -875,10 +878,47 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
     }
   };
 
+  const createStudent = async () => {
+    if (!newStudent.email || !newStudent.password || !newStudent.studentName) {
+      toast({ title: "חסרים שדות חובה", description: "אימייל, סיסמה ושם תלמיד הם שדות חובה", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-users", {
+        body: {
+          action: "create_user",
+          email: newStudent.email,
+          password: newStudent.password,
+          studentName: newStudent.studentName,
+          grade: newStudent.grade || null,
+          schoolId: newStudent.schoolId || null,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "התלמיד נוצר בהצלחה ✅" });
+      setShowAddDialog(false);
+      setNewStudent({ email: "", password: "", studentName: "", grade: "", schoolId: "" });
+      reload();
+      await loadAuthUsers();
+      await loadRoles();
+    } catch (err: any) {
+      toast({ title: "שגיאה ביצירת תלמיד", description: err.message, variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <>
       <SectionHeader title="ניהול תלמידים" icon={Users} count={students.length} />
-      <SearchBar value={search} onChange={setSearch} />
+      <div className="flex gap-2 mb-4">
+        <SearchBar value={search} onChange={setSearch} />
+        <Button onClick={() => setShowAddDialog(true)} className="gap-2 shrink-0">
+          <Plus className="h-4 w-4" /> הוסף תלמיד
+        </Button>
+      </div>
       <Card>
         <Table>
           <TableHeader>
@@ -1029,6 +1069,76 @@ function StudentsSection({ students, schools, reload, toast }: { students: any[]
             >
               {loadingAction ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
               אישור
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Student Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>הוסף תלמיד חדש</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>שם תלמיד *</Label>
+              <Input
+                value={newStudent.studentName}
+                onChange={(e) => setNewStudent((p) => ({ ...p, studentName: e.target.value }))}
+                placeholder="שם מלא"
+              />
+            </div>
+            <div>
+              <Label>אימייל *</Label>
+              <Input
+                type="email"
+                value={newStudent.email}
+                onChange={(e) => setNewStudent((p) => ({ ...p, email: e.target.value }))}
+                placeholder="student@example.com"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <Label>סיסמה *</Label>
+              <Input
+                type="text"
+                value={newStudent.password}
+                onChange={(e) => setNewStudent((p) => ({ ...p, password: e.target.value }))}
+                placeholder="לפחות 6 תווים"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <Label>כיתה</Label>
+              <Input
+                value={newStudent.grade}
+                onChange={(e) => setNewStudent((p) => ({ ...p, grade: e.target.value }))}
+                placeholder="לדוגמה: ח׳"
+              />
+            </div>
+            <div>
+              <Label>בית ספר</Label>
+              <Select
+                value={newStudent.schoolId}
+                onValueChange={(v) => setNewStudent((p) => ({ ...p, schoolId: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר בית ספר" />
+                </SelectTrigger>
+                <SelectContent>
+                  {schools.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>ביטול</Button>
+            <Button onClick={createStudent} disabled={creating}>
+              {creating ? <Loader2 className="h-4 w-4 animate-spin ml-1" /> : null}
+              צור תלמיד
             </Button>
           </DialogFooter>
         </DialogContent>
