@@ -80,12 +80,15 @@ Deno.serve(async (req) => {
         email_confirm: true,
       });
       if (createError) throw createError;
+      if (!newUser?.user) throw new Error("Failed to create user");
+
+      const newUserId = newUser.user.id;
 
       // Create student profile
       const { error: studentError } = await adminClient
         .from("students")
         .insert({
-          user_id: newUser.user.id,
+          user_id: newUserId,
           student_name: studentName,
           grade: grade || null,
           school_id: schoolId || null,
@@ -95,9 +98,9 @@ Deno.serve(async (req) => {
       // Add student role
       await adminClient
         .from("user_roles")
-        .insert({ user_id: newUser.user.id, role: "student" });
+        .insert({ user_id: newUserId, role: "student" });
 
-      result = { success: true, message: "User created", userId: newUser.user.id };
+      result = { success: true, message: "User created", userId: newUserId };
 
     } else {
       // ── All other actions require userId ──
@@ -204,7 +207,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

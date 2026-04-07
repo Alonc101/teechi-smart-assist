@@ -445,8 +445,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const subjectName = topic.subjects?.name || "";
-    const topicName = topic.name || "";
+    const subjectName = (topic as any).subjects?.name || "";
+    const topicName = (topic as any).name || "";
 
     // Fetch student profile for context + prompt priority
     let studentName = "";
@@ -462,10 +462,11 @@ Deno.serve(async (req) => {
         .single();
 
       if (student) {
-        studentName = student.student_name || "";
-        studentGrade = student.grade || null;
-        schoolId = student.school_id || null;
-        schoolName = student.schools?.name || "";
+        const s = student as any;
+        studentName = s.student_name || "";
+        studentGrade = s.grade || null;
+        schoolId = s.school_id || null;
+        schoolName = s.schools?.name || "";
       }
     }
 
@@ -579,7 +580,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ answer }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Function error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
