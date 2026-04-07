@@ -70,7 +70,8 @@ const Index = () => {
   }, [messages]);
 
   const handleSelectTopic = (subjectId: number, subjectName: string, topicId: number, topicName: string) => {
-    if (topicId !== selectedTopicId) {
+    const isNewTopic = topicId !== selectedTopicId;
+    if (isNewTopic) {
       setMessages([]);
       setSessionId(null);
     }
@@ -79,6 +80,28 @@ const Index = () => {
     setSelectedTopicId(topicId);
     setSelectedTopicName(topicName);
     setSidebarOpen(false);
+
+    // Auto-greet when student picks a new topic
+    if (isNewTopic && studentId) {
+      sendGreeting(subjectId, topicId);
+    }
+  };
+
+  const sendGreeting = async (subjectId: number, topicId: number) => {
+    setSending(true);
+    try {
+      const body = { message: "שלום", subjectId, topicId, sessionId: null, studentId };
+      const response = await supabase.functions.invoke("chat-groq", { body });
+      if (response.error) throw response.error;
+      const answer = response.data?.answer || "";
+      if (answer) {
+        setMessages([{ role: "assistant", content: answer }]);
+      }
+    } catch (err) {
+      console.error("Greeting error:", err);
+    } finally {
+      setSending(false);
+    }
   };
 
   const saveMessageToDb = async (currentSessionId: string, role: string, content: string) => {
